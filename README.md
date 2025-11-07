@@ -1,3 +1,3 @@
 # 61040-group-frontend
 
-initial commit
+This is the group's frontend for the 6.1040 project.
