@@ -1,0 +1,60 @@
+/* Global app styles (moved into utils). */
+
+/* Import the project's color tokens (colors live in the same folder) */
+@import "./colors.css";
+
+:root {
+  --app-bg: #f8fafc;
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial;
+  background: var(--app-bg);
+  color: var(--app-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-header {
+  background: #ffffff;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+  padding: 1rem 1.5rem;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 1.25rem;
+  /* use color token from colors.css */
+  color: var(--color-primary);
+}
+
+.app-main {
+  flex: 1 0 auto;
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.app-footer {
+  padding: 0.75rem 1.5rem;
+  text-align: center;
+  color: var(--app-muted);
+  font-size: 0.875rem;
+}
