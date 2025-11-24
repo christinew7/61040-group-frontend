@@ -9,6 +9,9 @@
 
     <!-- Main Content -->
     <div class="recipe-content">
+      <!-- Top Navbar -->
+      <Navbar title="recipe" />
+
       <!-- Loading State -->
       <div v-if="isLoading" class="loading-state">Loading recipe...</div>
 
@@ -97,6 +100,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
+import Navbar from "../components/Navbar.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import { getRecipe } from "../api/Recipe.js";
@@ -193,18 +197,21 @@ function handleProfileClick() {
 .recipe-layout {
   display: flex;
   min-height: 100vh;
+  align-items: stretch;
 }
 
 .recipe-content {
   flex: 1;
   background: #f9fafb;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Recipe Details */
 .recipe-details {
-  max-width: 1000px;
-  margin: 0 auto;
   padding: 2rem;
+  flex: 1;
 }
 
 /* Recipe Header */
@@ -287,6 +294,8 @@ function handleProfileClick() {
   list-style: none;
   padding: 0;
   margin: 0;
+  overflow: visible;
+  max-height: none;
 }
 
 .ingredient-item {
@@ -297,18 +306,19 @@ function handleProfileClick() {
   border-left: 3px solid var(--color-primary);
   font-size: 1.125rem;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.375rem;
+  align-items: baseline;
 }
 
 .ingredient-quantity {
   font-weight: 600;
   color: var(--color-primary);
-  min-width: 60px;
+  flex-shrink: 0;
 }
 
 .ingredient-unit {
   color: var(--color-text-dark, #0f172a);
-  min-width: 80px;
+  flex-shrink: 0;
 }
 
 .ingredient-name {
