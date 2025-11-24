@@ -6,11 +6,11 @@
       @add-collection="handleAddCollection"
       @recipe-search="handleRecipeSearch"
       @ingredient-filter-change="handleIngredientFilter"
+      @profile-click="handleProfileClick"
     />
 
     <div class="home-view">
       <h2>Home</h2>
-      <p>Welcome to the 61040 group frontend.</p>
 
       <section class="tester">
         <h3>RecipeDisplay tester</h3>
@@ -37,14 +37,33 @@
         </p>
       </section>
     </div>
+
+    <!-- Add Recipe Popup -->
+    <AddRecipePopup
+      :isOpen="isAddRecipePopupOpen"
+      @close="closeAddRecipePopup"
+      @submit="handleRecipeSubmit"
+    />
+
+    <!-- Add Collection Popup -->
+    <AddCollectionPopup
+      :isOpen="isAddCollectionPopupOpen"
+      @close="closeAddCollectionPopup"
+      @submit="handleCollectionSubmit"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
+import AddRecipePopup from "../components/AddRecipePopup.vue";
+import AddCollectionPopup from "../components/AddCollectionPopup.vue";
+
+const router = useRouter();
 
 const sampleRecipe = ref({
   _id: "recipe-123",
@@ -90,14 +109,38 @@ const sampleCollection = ref({
 const searchQuery = ref("");
 const ingredientFilters = ref([]);
 
+// Popup state
+const isAddRecipePopupOpen = ref(false);
+const isAddCollectionPopupOpen = ref(false);
+
 function handleAddRecipe() {
   console.log("Add recipe clicked");
-  alert("Add Recipe functionality would go here");
+  isAddRecipePopupOpen.value = true;
+}
+
+function closeAddRecipePopup() {
+  isAddRecipePopupOpen.value = false;
+}
+
+function handleRecipeSubmit(recipeData) {
+  console.log("Recipe submitted:", recipeData);
+  // Here you would typically send the data to your backend API
+  alert(`Recipe "${recipeData.name}" created successfully!`);
 }
 
 function handleAddCollection() {
   console.log("Add collection clicked");
-  alert("Add Collection functionality would go here");
+  isAddCollectionPopupOpen.value = true;
+}
+
+function closeAddCollectionPopup() {
+  isAddCollectionPopupOpen.value = false;
+}
+
+function handleCollectionSubmit(collectionData) {
+  console.log("Collection submitted:", collectionData);
+  // Here you would typically send the data to your backend API
+  alert(`Collection "${collectionData.name}" created successfully!`);
 }
 
 function handleRecipeSearch(query) {
@@ -110,12 +153,28 @@ function handleIngredientFilter(ingredients) {
   ingredientFilters.value = ingredients;
 }
 
+function handleProfileClick() {
+  router.push("/profile");
+}
+
 function onRecipeClick(recipe) {
   console.log("Recipe clicked:", recipe);
+  // Navigate to recipe detail page
+  router.push({
+    name: "Recipe",
+    params: { id: recipe._id },
+    query: { recipe: encodeURIComponent(JSON.stringify(recipe)) },
+  });
 }
 
 function onCollectionClick(collection) {
   console.log("Collection clicked:", collection);
+  // Navigate to collection detail page
+  router.push({
+    name: "Collection",
+    params: { id: collection._id },
+    query: { name: collection.name },
+  });
 }
 </script>
 

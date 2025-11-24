@@ -7,7 +7,7 @@
 
     <!-- My Profile Section with Subtabs -->
     <div class="profile-section">
-      <div class="profile-label">My Profile</div>
+      <div class="profile-label" @click="handleProfileClick">My Profile</div>
 
       <div class="subtabs">
         <button class="subtab-button" @click="handleAddRecipe">
@@ -79,12 +79,17 @@ const emit = defineEmits([
   "add-collection",
   "recipe-search",
   "ingredient-filter-change",
+  "profile-click",
 ]);
 
 // Search state
 const recipeSearchQuery = ref("");
 const ingredientFilterInput = ref("");
 const selectedIngredients = ref([]);
+
+function handleProfileClick() {
+  emit("profile-click");
+}
 
 function handleAddRecipe() {
   emit("add-recipe");

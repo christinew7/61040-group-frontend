@@ -115,6 +115,26 @@ export async function viewRecipe(token, ownerId, title) {
   }
 }
 
+/**
+ * @route POST api/Recipe/getRecipe
+ * @desc Get a specific recipe by ID.
+ */
+export async function getRecipe(token, recipeId) {
+  if (typeof token !== "string" || typeof recipeId !== "string") {
+    throw new TypeError("Token and recipe ID are required.");
+  }
+
+  try {
+    const response = await api.post("/getRecipe", {
+      token,
+      recipe: recipeId,
+    });
+    return response.data.recipe;
+  } catch (err) {
+    throw new Error(err.response?.data?.error || "Failed to get recipe.");
+  }
+}
+
 // --- Ingredient Management on Recipe ---
 
 /**
