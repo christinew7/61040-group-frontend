@@ -90,6 +90,17 @@
       @close="closeAddCollectionPopup"
       @submit="handleCollectionSubmit"
     />
+
+    <!-- Delete Account Confirmation Popup -->
+    <ConfirmationPopup
+      :isOpen="isDeleteConfirmOpen"
+      title="Delete Account"
+      message="Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed."
+      confirmText="Delete Account"
+      cancelText="Cancel"
+      @confirm="confirmDeleteAccount"
+      @close="closeDeleteConfirm"
+    />
   </div>
 </template>
 
@@ -100,6 +111,7 @@ import Sidebar from "../components/Sidebar.vue";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
+import ConfirmationPopup from "../components/ConfirmationPopup.vue";
 import { getMyCollections } from "../api/Collecting.js";
 
 const router = useRouter();
@@ -107,6 +119,7 @@ const router = useRouter();
 // Popup state
 const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
+const isDeleteConfirmOpen = ref(false);
 
 // User account data
 const displayName = ref("John Doe");
@@ -151,23 +164,22 @@ function saveDisplayName() {
 }
 
 function handleLogout() {
-  if (confirm("Are you sure you want to logout?")) {
-    console.log("Logging out...");
-    // TODO: Call logout API and redirect to login
-    alert("Logged out successfully!");
-  }
+  // TODO: Call logout API and redirect to login
+  alert("Account would be logged out, logout api!");
 }
 
 function handleDeleteAccount() {
-  if (
-    confirm(
-      "Are you sure you want to delete your account? This action cannot be undone."
-    )
-  ) {
-    console.log("Deleting account...");
-    // TODO: Call delete account API
-    alert("Account deleted");
-  }
+  isDeleteConfirmOpen.value = true;
+}
+
+function confirmDeleteAccount() {
+  console.log("Deleting account...");
+  // TODO: Call delete account API
+  alert("Account would be deleted, call api!");
+}
+
+function closeDeleteConfirm() {
+  isDeleteConfirmOpen.value = false;
 }
 
 function onCollectionClick(collection) {
