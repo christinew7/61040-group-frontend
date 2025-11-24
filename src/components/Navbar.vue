@@ -21,7 +21,7 @@
 </template>
 
 <script setup>
-import "./Navbar.css";
+import "./NavBar.css";
 import { useRouter } from "vue-router";
 
 const props = defineProps({
