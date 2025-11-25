@@ -16,7 +16,7 @@
 
       <!-- Main Content Area -->
       <div class="main-content">
-        <Header v-if="shouldShowHeader" @sign-in="showLogin = true" />
+        <Header @sign-in="showLogin = true" />
         <router-view />
       </div>
     </div>
@@ -82,11 +82,6 @@ const userRecipes = ref([]);
 
 // Show search only on Home page
 const shouldShowSearch = computed(() => route.name === "Home");
-
-// Hide header on pages that have their own navbar
-const shouldShowHeader = computed(() => {
-  return !["Collection", "Recipe", "Profile"].includes(route.name);
-});
 
 onMounted(async () => {
   await init();

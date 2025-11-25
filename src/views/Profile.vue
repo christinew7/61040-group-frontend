@@ -2,10 +2,6 @@
   <div class="profile-layout">
     <!-- Main Content -->
     <div class="profile-content">
-      <!-- Top Navbar -->
-      <div class="profile-navbar">
-        <h1>my profile</h1>
-      </div>
       <!-- My Account Section -->
       <section class="account-section">
         <h2>My Account</h2>
@@ -145,7 +141,7 @@ import { getProfile, updateDisplayName, deleteAccount } from "../api/User.js";
 
 const router = useRouter();
 const { token, user, logout } = useAuth();
-const { setTitle, setBreadcrumbs } = useHeader();
+const { setTitle, setBreadcrumbs, setActions } = useHeader();
 
 // for display name
 const isSaving = ref(false);
@@ -173,6 +169,7 @@ const recipesError = ref(null);
 onMounted(async () => {
   setTitle("my profile");
   setBreadcrumbs([]);
+  setActions([]);
   // Fetch fresh profile data from API
   try {
     const authToken = getToken();

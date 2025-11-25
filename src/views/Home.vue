@@ -69,7 +69,7 @@ import RecipeDisplay from "../components/RecipeDisplay.vue";
 
 const router = useRouter();
 const { searchQuery, ingredientFilters } = useAppSearch();
-const { setTitle, setBreadcrumbs } = useHeader();
+const { setTitle, setBreadcrumbs, setActions } = useHeader();
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
@@ -121,6 +121,7 @@ const filteredRecipes = computed(() => {
 onMounted(async () => {
   setTitle("home");
   setBreadcrumbs([]);
+  setActions([]);
   await init();
   await fetchAllRecipes();
 });

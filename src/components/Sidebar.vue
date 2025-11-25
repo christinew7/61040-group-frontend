@@ -21,51 +21,46 @@
       </button>
     </div>
 
-      <!-- Auth Section -->
-      <div v-if="!isLoggedIn" class="auth-section">
-        <button @click="handleSignIn" class="signin-button">Sign In</button>
+    <!-- Conditional Search Section -->
+    <div v-if="showSearch" class="search-section">
+      <h3 class="section-heading">Search</h3>
+
+      <!-- Recipe Title Search -->
+      <div class="search-input-group">
+        <label for="recipe-search">Recipe Title</label>
+        <input
+          id="recipe-search"
+          v-model="recipeSearchQuery"
+          type="text"
+          placeholder="Search recipes..."
+          class="search-input"
+          @input="handleRecipeSearch"
+        />
       </div>
 
-      <!-- Conditional Search Section -->
-      <div v-if="showSearch" class="search-section">
-        <h3 class="section-heading">Search</h3>
-
-        <!-- Recipe Title Search -->
-        <div class="search-input-group">
-          <label for="recipe-search">Recipe Title</label>
-          <input
-            id="recipe-search"
-            v-model="recipeSearchQuery"
-            type="text"
-            placeholder="Search recipes..."
-            class="search-input"
-            @input="handleRecipeSearch"
-          />
-        </div>
-
-        <!-- Ingredient Filter -->
-        <div class="filter-group">
-          <label for="ingredient-filter">Filter by Ingredients</label>
-          <input
-            id="ingredient-filter"
-            v-model="ingredientFilterInput"
-            type="text"
-            placeholder="Add ingredient..."
-            class="search-input"
-            @keydown.enter="addIngredientFilter"
-          />
-        </div>
-
-        <!-- Ingredient Chips Container -->
-        <div class="ingredient-chips-container">
-          <IngredientChip
-            v-for="ingredient in selectedIngredients"
-            :key="ingredient"
-            :label="ingredient"
-            @remove="removeIngredient(ingredient)"
-          />
-        </div>
+      <!-- Ingredient Filter -->
+      <div class="filter-group">
+        <label for="ingredient-filter">Filter by Ingredients</label>
+        <input
+          id="ingredient-filter"
+          v-model="ingredientFilterInput"
+          type="text"
+          placeholder="Add ingredient..."
+          class="search-input"
+          @keydown.enter="addIngredientFilter"
+        />
       </div>
+
+      <!-- Ingredient Chips Container -->
+      <div class="ingredient-chips-container">
+        <IngredientChip
+          v-for="ingredient in selectedIngredients"
+          :key="ingredient"
+          :label="ingredient"
+          @remove="removeIngredient(ingredient)"
+        />
+      </div>
+    </div>
   </aside>
 </template>
 

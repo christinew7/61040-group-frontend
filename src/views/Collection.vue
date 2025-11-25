@@ -2,23 +2,6 @@
   <div class="collection-layout">
     <!-- Main Content -->
     <div class="collection-content">
-      <!-- Top Navbar with Collection Name -->
-      <div class="collection-navbar">
-        <h1>{{ collectionName }}</h1>
-        <div class="collection-actions">
-          <button @click="showAddMemberDialog" class="btn-action">
-            + Add Member
-          </button>
-          <button
-            v-if="isOwner"
-            @click="handleDeleteCollection"
-            class="btn-action btn-danger"
-          >
-            Delete Collection
-          </button>
-        </div>
-      </div>
-
       <!-- Loading State -->
       <div v-if="isLoading" class="loading-state">Loading collection...</div>
 
@@ -148,7 +131,7 @@ import { useHeader } from "../composables/useHeader.js";
 const router = useRouter();
 const route = useRoute();
 const { token, logout, user, init } = useAuth();
-const { setTitle, setBreadcrumbs } = useHeader();
+const { setTitle, setBreadcrumbs, setActions } = useHeader();
 
 // Collection data
 const collectionId = ref(route.params.id);
@@ -298,6 +281,24 @@ async function fetchCollectionDetails() {
     console.log("Current user ID:", user.value?.id);
     console.log("Current user _id:", user.value?._id);
     console.log("Is owner:", isOwner.value);
+
+    // Set header actions
+    const actions = [
+      {
+        label: "+ Add Member",
+        onClick: showAddMemberDialog,
+      },
+    ];
+
+    if (isOwner.value) {
+      actions.push({
+        label: "Delete Collection",
+        onClick: handleDeleteCollection,
+        variant: "danger",
+      });
+    }
+
+    setActions(actions);
   } catch (err) {
     console.error("Failed to fetch collection details:", err);
     error.value = err.message;

@@ -2,9 +2,6 @@
   <div class="recipe-layout">
     <!-- Main Content -->
     <div class="recipe-content">
-      <!-- Top Navbar -->
-      <Navbar title="recipe" />
-
       <!-- Loading State -->
       <div v-if="isLoading" class="loading-state">Loading recipe...</div>
 
@@ -194,7 +191,6 @@
 import { computed, ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
-import Navbar from "../components/Navbar.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import {
@@ -213,7 +209,7 @@ import { useHeader } from "../composables/useHeader.js";
 const router = useRouter();
 const route = useRoute();
 const { token, isLoggedIn, user, logout } = useAuth();
-const { setTitle, setBreadcrumbs } = useHeader();
+const { setTitle, setBreadcrumbs, setActions } = useHeader();
 
 // Recipe data
 const recipe = ref({
@@ -330,6 +326,7 @@ async function fetchRecipeDetails() {
     recipe.value = Array.isArray(recipes) ? recipes[0] : recipes;
 
     setTitle("recipe");
+    setActions([]);
 
     // Determine breadcrumbs based on context
     const from = route.query.from;
