@@ -122,11 +122,10 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onActivated } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
 import { useHeader } from "../composables/useHeader.js";
-import Sidebar from "../components/Sidebar.vue";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import ConfirmationPopup from "../components/ConfirmationPopup.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
@@ -191,6 +190,13 @@ onMounted(async () => {
   // Fetch user collections on mount
   await fetchCollections();
   await fetchRecipes(); // user's own recipes
+});
+
+// Refetch collections when navigating back to profile
+// This ensures the list updates after creating a collection from the global popup
+onActivated(async () => {
+  await fetchCollections();
+  await fetchRecipes();
 });
 
 // Helper function to get auth token
