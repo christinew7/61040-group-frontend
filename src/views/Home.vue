@@ -25,7 +25,7 @@
       </div>
     </section>
 
-    <!-- Debug output -->
+    <!-- Debug output
     <section class="debug-section">
       <h3>Search & Filter State for Debugging</h3>
       <p><strong>Recipe Search:</strong> {{ searchQuery || "(none)" }}</p>
@@ -33,7 +33,7 @@
         <strong>Ingredient Filters:</strong>
         {{ ingredientFilters.length ? ingredientFilters.join(", ") : "(none)" }}
       </p>
-    </section>
+    </section> -->
 
     <!-- Add Recipe Popup -->
     <AddRecipePopup
