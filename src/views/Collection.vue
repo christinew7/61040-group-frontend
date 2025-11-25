@@ -110,7 +110,10 @@ function onRecipeClick(recipe) {
   router.push({
     name: "Recipe",
     params: { id: recipe._id },
-    query: { recipe: encodeURIComponent(JSON.stringify(recipe)) },
+    query: {
+      owner: recipe.owner,
+      title: recipe.title,
+    },
   });
 }
 </script>
