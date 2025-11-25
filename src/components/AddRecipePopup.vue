@@ -116,13 +116,13 @@
             <h3>6. Add Ingredients</h3>
             <textarea
               v-model="formData.ingredientsText"
-              placeholder="Enter one ingredient per line in format: quantity,unit,name&#10;Example:&#10;1,cup,flour&#10;2,tablespoons,sugar&#10;0.5,teaspoon,salt"
+              placeholder="Enter one ingredient per line in format: quantity, unit, name&#10;Example:&#10;1, cup, flour&#10;2, tablespoons, sugar&#10;0.5, teaspoon, salt"
               class="form-textarea"
               rows="8"
             ></textarea>
             <p class="form-hint">
-              Format: <code>quantity,unit,name</code> (one per line)<br />
-              Example: <code>1,cup,flour</code>
+              Format: <code>quantity, unit, name</code> (one per line)<br />
+              Example: <code>1, cup, flour</code>
             </p>
           </div>
         </div>

@@ -96,6 +96,7 @@
 .form-section {
   padding-bottom: 2rem;
   border-bottom: 1px solid #e5e7eb;
+  max-width: 95%;
 }
 
 .form-section:last-child {
