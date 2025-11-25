@@ -16,6 +16,7 @@
 
       <!-- Main Content Area -->
       <div class="main-content">
+        <Header @sign-in="showLogin = true" />
         <router-view />
       </div>
     </div>
@@ -48,6 +49,7 @@ import { useRouter, useRoute } from "vue-router";
 import { useAuth } from "./composables/useAuth.js";
 import { useAppSearch } from "./composables/useAppSearch.js";
 import Sidebar from "./components/Sidebar.vue";
+import Header from "./components/Header.vue";
 import LoginPopup from "./components/LoginPopup.vue";
 import AddRecipePopup from "./components/AddRecipePopup.vue";
 import AddCollectionPopup from "./components/AddCollectionPopup.vue";

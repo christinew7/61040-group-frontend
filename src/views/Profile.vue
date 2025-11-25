@@ -1,9 +1,5 @@
 <template>
   <div class="profile-content">
-    <!-- Top Navbar -->
-    <div class="profile-navbar">
-      <h1>my profile</h1>
-    </div>
     <!-- My Account Section -->
     <section class="account-section">
       <h2>My Account</h2>
@@ -122,6 +118,7 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
+import { useHeader } from "../composables/useHeader.js";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import ConfirmationPopup from "../components/ConfirmationPopup.vue";
 import { getMyCollections } from "../api/Collecting.js";
@@ -131,6 +128,7 @@ import RecipeDisplay from "../components/RecipeDisplay.vue";
 
 const router = useRouter();
 const { token, user, logout } = useAuth();
+const { setTitle, setBreadcrumbs } = useHeader();
 
 // for display name
 const isSaving = ref(false);
@@ -156,6 +154,8 @@ const isLoadingRecipes = ref(false);
 const recipesError = ref(null);
 
 onMounted(async () => {
+  setTitle("my profile");
+  setBreadcrumbs([]);
   // Fetch fresh profile data from API
   try {
     const authToken = getToken();
@@ -299,6 +299,7 @@ function onRecipeClick(recipe) {
     query: {
       owner: recipe.owner,
       title: recipe.title,
+      from: 'profile'
     },
   });
 }
@@ -315,21 +316,6 @@ function onRecipeClick(recipe) {
 .profile-content {
   flex: 1;
   background: #f9fafb;
-}
-
-/* Top Navbar */
-.profile-navbar {
-  background: white;
-  border-bottom: 2px solid var(--color-primary);
-  padding: 1.5rem 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.profile-navbar h1 {
-  margin: 0;
-  font-size: 1.75rem;
-  color: var(--color-primary);
-  text-transform: lowercase;
 }
 
 /* Account Section */

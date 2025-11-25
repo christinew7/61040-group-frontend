@@ -1,8 +1,5 @@
 <template>
   <div class="recipe-content">
-    <!-- Top Navbar -->
-    <Navbar title="recipe" />
-
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-state">Loading recipe...</div>
 
@@ -75,13 +72,14 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import Navbar from "../components/Navbar.vue";
 import { getRecipe } from "../api/Recipe.js";
 import { useAuth } from "../composables/useAuth.js";
+import { useHeader } from "../composables/useHeader.js";
 
 const router = useRouter();
 const route = useRoute();
 const { token, isLoggedIn } = useAuth();
+const { setTitle, setBreadcrumbs } = useHeader();
 
 // Recipe data
 const recipe = ref({
@@ -131,6 +129,35 @@ async function fetchRecipeDetails() {
     }
 
     recipe.value = Array.isArray(recipes) ? recipes[0] : recipes;
+    
+    setTitle("recipe");
+    
+    // Determine breadcrumbs based on context
+    const from = route.query.from;
+    let breadcrumbs = [];
+
+    if (from === 'profile') {
+      breadcrumbs = [
+        { label: 'My Profile', route: '/profile' },
+        { label: recipe.value.title }
+      ];
+    } else if (from === 'collection') {
+      const collectionId = route.query.collectionId;
+      const collectionName = route.query.collectionName || 'Collection';
+      breadcrumbs = [
+        { label: 'My Profile', route: '/profile' },
+        { label: collectionName, route: { name: 'Collection', params: { id: collectionId }, query: { name: collectionName } } },
+        { label: recipe.value.title }
+      ];
+    } else {
+      // Default to Home
+      breadcrumbs = [
+        { label: 'Home', route: '/' },
+        { label: recipe.value.title }
+      ];
+    }
+
+    setBreadcrumbs(breadcrumbs);
 
     console.log("Recipe loaded:", recipe.value);
     console.log("Recipe image:", recipe.value?.image);

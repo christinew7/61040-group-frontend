@@ -1,7 +1,5 @@
 <template>
   <div class="home-view">
-    <h2>Home</h2>
-
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-state">Loading recipes...</div>
 
@@ -40,18 +38,22 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
 import { useAppSearch } from "../composables/useAppSearch.js";
+import { useHeader } from "../composables/useHeader.js";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
 import { getAllRecipesGlobal } from "../api/Recipe.js";
 
 const router = useRouter();
 const { init } = useAuth();
 const { searchQuery, ingredientFilters } = useAppSearch();
+const { setTitle, setBreadcrumbs } = useHeader();
 
 // Recipes from API
 const allRecipes = ref([]);
 const isLoading = ref(false);
 
 onMounted(async () => {
+  setTitle("home");
+  setBreadcrumbs([]);
   await init();
   await fetchAllRecipes();
 });

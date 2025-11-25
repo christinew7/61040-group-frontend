@@ -1,10 +1,5 @@
 <template>
   <div class="collection-content">
-    <!-- Top Navbar with Collection Name -->
-    <div class="collection-navbar">
-      <h1>{{ collectionName }}</h1>
-    </div>
-
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-state">Loading collection...</div>
 
@@ -47,10 +42,12 @@ import {
   parseIngredients,
 } from "../api/Recipe.js";
 import { useAuth } from "../composables/useAuth.js";
+import { useHeader } from "../composables/useHeader.js";
 
 const router = useRouter();
 const route = useRoute();
 const { token } = useAuth();
+const { setTitle, setBreadcrumbs } = useHeader();
 
 // Collection data
 const collectionId = ref(route.params.id);
@@ -96,6 +93,12 @@ async function fetchCollectionDetails() {
 
     // Get collection name from route query or use a default
     collectionName.value = route.query.name || "Collection";
+    
+    setTitle(collectionName.value);
+    setBreadcrumbs([
+      { label: 'My Profile', route: '/profile' },
+      { label: collectionName.value }
+    ]);
   } catch (err) {
     console.error("Failed to fetch collection details:", err);
     error.value = err.message;
@@ -113,6 +116,9 @@ function onRecipeClick(recipe) {
     query: {
       owner: recipe.owner,
       title: recipe.title,
+      from: 'collection',
+      collectionId: collectionId.value,
+      collectionName: collectionName.value
     },
   });
 }
@@ -122,21 +128,6 @@ function onRecipeClick(recipe) {
 .collection-content {
   flex: 1;
   background: #f9fafb;
-}
-
-/* Top Navbar */
-.collection-navbar {
-  background: white;
-  border-bottom: 2px solid var(--color-primary);
-  padding: 1.5rem 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.collection-navbar h1 {
-  margin: 0;
-  font-size: 1.75rem;
-  color: var(--color-primary);
-  text-transform: lowercase;
 }
 
 /* Recipes Section */
