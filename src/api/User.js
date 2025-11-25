@@ -49,9 +49,21 @@ export async function login(email, password) {
 
   try {
     const response = await authApi.post("/login", { email, password });
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
     return response.data; // { token }
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to login.");
+    // If axios error, extract message
+    if (err.response?.data?.error) {
+      throw new Error(err.response.data.error);
+    }
+    // If our thrown error, pass through
+    if (err.message) {
+      throw err;
+    }
+    // Fallback
+    throw new Error("Failed to login.");
   }
 }
 
