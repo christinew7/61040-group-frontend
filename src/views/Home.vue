@@ -15,22 +15,28 @@
     <div class="home-view">
       <h2>Home</h2>
 
-      <section class="tester">
-        <h3>RecipeDisplay tester</h3>
-        <RecipeDisplay :recipe="sampleRecipe" @click="onRecipeClick" />
-      </section>
+      <!-- Loading State -->
+      <div v-if="isLoading" class="loading-state">Loading recipes...</div>
 
-      <section class="tester">
-        <h3>CollectionDisplay tester</h3>
-        <CollectionDisplay
-          :collection="sampleCollection"
-          @click="onCollectionClick"
-        />
+      <!-- All Recipes Section -->
+      <section v-else class="recipes-section">
+        <h3>All Recipes</h3>
+        <div v-if="allRecipes.length === 0" class="empty-state">
+          No recipes found. Create one to get started!
+        </div>
+        <div v-else class="recipes-grid">
+          <RecipeDisplay
+            v-for="recipe in allRecipes"
+            :key="recipe._id"
+            :recipe="recipe"
+            @click="onRecipeClick"
+          />
+        </div>
       </section>
 
       <!-- Debug output -->
       <section class="debug-section">
-        <h3>Search & Filter State</h3>
+        <h3>Search & Filter State for Debugging</h3>
         <p><strong>Recipe Search:</strong> {{ searchQuery || "(none)" }}</p>
         <p>
           <strong>Ingredient Filters:</strong>
@@ -75,15 +81,43 @@ import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import { getMyCollections } from "../api/Collecting.js";
-import { createRecipe, parseIngredients, setImage } from "../api/Recipe.js";
+import {
+  createRecipe,
+  parseIngredients,
+  setImage,
+  getAllRecipesGlobal,
+} from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
 
-const { token, isLoggedIn, logout, init } = useAuth(); 
+const { token, isLoggedIn, logout, init } = useAuth();
 const showLogin = ref(false);
+
+// Recipes from API
+const allRecipes = ref([]);
+const isLoading = ref(false);
 
 onMounted(async () => {
   await init();
+  await fetchAllRecipes();
 });
+
+async function fetchAllRecipes() {
+  isLoading.value = true;
+  try {
+    console.log("Calling getAllRecipesGlobal...");
+    const recipes = await getAllRecipesGlobal();
+    allRecipes.value = recipes || [];
+    console.log("Fetched all recipes:", allRecipes.value);
+    console.log("Number of recipes:", allRecipes.value.length);
+  } catch (error) {
+    console.error("Failed to fetch recipes:", error);
+    console.error("Error details:", error.message);
+    // Set empty array on error so page still renders
+    allRecipes.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+}
 
 async function handleLogout() {
   await logout();
@@ -173,7 +207,7 @@ async function handleRecipeSubmit(recipeData) {
   }
 
   try {
-    // Create recipe 
+    // Create recipe
     const recipeId = await createRecipe(
       token.value,
       recipeData.name,
@@ -217,6 +251,9 @@ async function handleRecipeSubmit(recipeData) {
     }
 
     alert(`Recipe "${recipeData.name}" created successfully!`);
+
+    // Refresh recipes list
+    await fetchAllRecipes();
   } catch (error) {
     console.error("Failed to create recipe:", error);
     alert(`Failed to create recipe: ${error.message}`);
@@ -261,9 +298,9 @@ function onRecipeClick(recipe) {
   router.push({
     name: "Recipe",
     params: { id: recipe._id },
-    query: { 
+    query: {
       owner: recipe.owner,
-      title: recipe.title 
+      title: recipe.title,
     },
   });
 }
@@ -316,5 +353,39 @@ function onCollectionClick(collection) {
 .debug-section p {
   margin: 0.5rem 0;
   font-size: 0.9rem;
+}
+
+.loading-state {
+  text-align: center;
+  color: #6b7280;
+  font-size: 1rem;
+  padding: 3rem 2rem;
+}
+
+.recipes-section {
+  margin-top: 2rem;
+}
+
+.recipes-section h3 {
+  font-size: 1.5rem;
+  color: var(--color-text-dark, #0f172a);
+  margin-bottom: 1.5rem;
+}
+
+.recipes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.empty-state {
+  text-align: center;
+  color: #6b7280;
+  font-size: 1rem;
+  padding: 3rem 2rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 </style>

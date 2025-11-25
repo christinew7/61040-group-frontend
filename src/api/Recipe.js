@@ -18,7 +18,7 @@ export async function createRecipe(
   token,
   title,
   link = null,
-  description = null,
+  description = null
 ) {
   if (typeof token !== "string") throw new TypeError("Token is required.");
   if (typeof title !== "string") throw new TypeError("Title is required.");
@@ -31,12 +31,12 @@ export async function createRecipe(
       description,
     });
     console.log("API response for createRecipe:", response.data);
-    
+
     // Check if response contains an error
     if (response.data.error) {
       throw new Error(response.data.error);
     }
-    
+
     // Backend returns { recipe: recipeId } where recipe is just the ID string
     const recipeId = response.data.recipe;
     console.log("Created recipe ID:", recipeId);
@@ -102,6 +102,39 @@ export async function getAllMyRecipes(token) {
 }
 
 /**
+ * @route POST api/Recipe/getAllRecipesGlobal
+ * @desc Retrieve all recipes
+ */
+export async function getAllRecipesGlobal() {
+  try {
+    const response = await api.post("/_getAllRecipesGlobal");
+    console.log("getAllRecipesGlobal response:", response);
+    console.log("getAllRecipesGlobal response.data:", response.data);
+
+    // Handle empty or invalid response
+    if (!response.data) {
+      console.log("No data in response, returning empty array");
+      return [];
+    }
+
+    // Backend returns array of {recipe: {...}} objects
+    // Extract the recipe from each object
+    const recipes = Array.isArray(response.data)
+      ? response.data.map((item) => item.recipe)
+      : [];
+
+    console.log("First recipe (if exists):", recipes[0]);
+    console.log("Total recipes:", recipes.length);
+    return recipes;
+  } catch (err) {
+    console.error("getAllRecipesGlobal error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to fetch recipes."
+    );
+  }
+}
+
+/**
  * @route POST api/Recipe/viewRecipe
  * @desc View a specific recipe by owner and title.
  */
@@ -138,11 +171,11 @@ export async function getRecipe(owner, title) {
 
   try {
     const response = await api.post("/_getRecipe", { owner, title });
-    
+
     if (response.data.error) {
       throw new Error(response.data.error);
     }
-    
+
     return response.data; // Just the recipe
   } catch (err) {
     throw new Error(err.response?.data?.error || "Failed to get recipe.");
