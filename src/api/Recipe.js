@@ -336,6 +336,47 @@ export async function parseIngredients(token, recipeId, ingredientsText) {
   }
 }
 
+/**
+ * @route POST api/Recipe/parseFromLink
+ * @desc Parse a recipe from a URL using LLM and create a new recipe.
+ * @param {string} token - Authentication token
+ * @param {string} link - URL of the recipe to parse
+ * @returns {Promise<Object>} The created recipe object
+ */
+export async function parseFromLink(token, link) {
+  if (typeof token !== "string" || typeof link !== "string") {
+    throw new TypeError("Token and link are required.");
+  }
+
+  console.log("parseFromLink called with:", {
+    token: token.substring(0, 10) + "...",
+    link,
+  });
+
+  try {
+    const response = await api.post("/parseFromLink", {
+      token,
+      link,
+    });
+    console.log("parseFromLink response:", response.data);
+
+    // Check if response contains an error
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+
+    // Backend returns { recipe: RecipeDoc }
+    return response.data.recipe;
+  } catch (err) {
+    console.error("parseFromLink error:", err.response?.data || err.message);
+    throw new Error(
+      err.response?.data?.error ||
+        err.message ||
+        "Failed to parse recipe from link."
+    );
+  }
+}
+
 // --- Recipe Metadata Updates ---
 
 /**

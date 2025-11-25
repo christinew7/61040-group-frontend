@@ -42,12 +42,14 @@
                 <button @click="handleEditRecipe" class="btn-action btn-edit">
                   Edit
                 </button>
-                <button @click="handleDeleteRecipe" class="btn-action btn-delete">
+                <button
+                  @click="handleDeleteRecipe"
+                  class="btn-action btn-delete"
+                >
                   Delete
                 </button>
               </template>
-              
-              
+
               <!-- Non-owner actions only -->
               <template v-if="!isOwner">
                 <button @click="handleCopyRecipe" class="btn-action btn-copy">
@@ -56,7 +58,10 @@
               </template>
 
               <!-- Actions for all logged-in users -->
-              <button @click="handleAddToCollection" class="btn-action btn-collection">
+              <button
+                @click="handleAddToCollection"
+                class="btn-action btn-collection"
+              >
                 Add to Collection
               </button>
             </div>
@@ -101,6 +106,7 @@
         :collections="userCollections"
         @close="closeAddRecipePopup"
         @submit="handleRecipeSubmit"
+        @submitParsed="handleParsedRecipeSubmit"
       />
 
       <!-- Add Collection Popup -->
@@ -109,28 +115,34 @@
         @close="closeAddCollectionPopup"
         @submit="handleCollectionSubmit"
       />
-      
+
       <!-- Add to Collection Modal -->
-      <div v-if="showCollectionModal" class="modal-overlay" @click.self="closeCollectionModal">
+      <div
+        v-if="showCollectionModal"
+        class="modal-overlay"
+        @click.self="closeCollectionModal"
+      >
         <div class="modal-content">
           <div class="modal-header">
             <h3>Add to Collection</h3>
-            <button @click="closeCollectionModal" class="close-button">&times;</button>
+            <button @click="closeCollectionModal" class="close-button">
+              &times;
+            </button>
           </div>
-          
+
           <div class="modal-body">
             <div v-if="collectionsWithStatus.length === 0" class="empty-state">
               You don't have any collections yet. Create one first!
             </div>
-            
+
             <div v-else class="collection-list">
-              <label 
-                v-for="collection in collectionsWithStatus" 
+              <label
+                v-for="collection in collectionsWithStatus"
                 :key="collection._id"
                 class="collection-checkbox"
               >
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   :checked="collection.hasItem"
                   @change="toggleCollection(collection)"
                 />
@@ -138,7 +150,7 @@
               </label>
             </div>
           </div>
-          
+
           <div class="modal-footer">
             <button @click="closeCollectionModal" class="btn-done">Done</button>
           </div>
@@ -146,28 +158,35 @@
       </div>
 
       <!-- Delete Confirmation Modal -->
-      <div v-if="showDeleteModal" class="modal-overlay" @click.self="cancelDelete">
+      <div
+        v-if="showDeleteModal"
+        class="modal-overlay"
+        @click.self="cancelDelete"
+      >
         <div class="modal-content delete-modal">
           <div class="modal-header">
             <h3>Delete Recipe</h3>
             <button @click="cancelDelete" class="close-button">&times;</button>
           </div>
-          
+
           <div class="modal-body">
             <p class="delete-warning">
-              Are you sure you want to delete "<strong>{{ recipe.title }}</strong>"?
+              Are you sure you want to delete "<strong>{{
+                recipe.title
+              }}</strong
+              >"?
             </p>
             <p class="delete-subtext">This action cannot be undone.</p>
           </div>
-          
+
           <div class="modal-footer delete-footer">
             <button @click="cancelDelete" class="btn-cancel">Cancel</button>
-            <button 
-              @click="confirmDelete" 
+            <button
+              @click="confirmDelete"
               class="btn-confirm-delete"
               :disabled="isDeleting"
             >
-              {{ isDeleting ? 'Deleting...' : 'Delete Recipe' }}
+              {{ isDeleting ? "Deleting..." : "Delete Recipe" }}
             </button>
           </div>
         </div>
@@ -182,7 +201,6 @@
       <div v-if="showErrorMessage" class="message error-message">
         ✗ {{ errorMessage }}
       </div>
-
     </div>
   </div>
 </template>
@@ -202,7 +220,11 @@ import {
   copyRecipe,
   viewRecipe,
 } from "../api/Recipe.js";
-import { getMyCollections, addItemToCollection, removeItemFromCollection } from "../api/Collecting.js";
+import {
+  getMyCollections,
+  addItemToCollection,
+  removeItemFromCollection,
+} from "../api/Collecting.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useHeader } from "../composables/useHeader.js";
 
@@ -233,7 +255,12 @@ const showCollectionModal = ref(false);
 const collectionsWithStatus = ref([]);
 const isLoadingCollections = ref(false);
 
-//Delete modal state 
+// Popup state
+const isAddRecipePopupOpen = ref(false);
+const isAddCollectionPopupOpen = ref(false);
+const userCollections = ref([]);
+
+//Delete modal state
 const showDeleteModal = ref(false);
 const isDeleting = ref(false);
 
@@ -247,6 +274,7 @@ const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 // Fetch recipe details on mount
 onMounted(async () => {
   await fetchRecipeDetails();
+  await fetchCollections();
 });
 
 async function fetchCollections() {
@@ -263,7 +291,7 @@ async function fetchCollections() {
 function showSuccess(message) {
   successMessage.value = message;
   showSuccessMessage.value = true;
-  
+
   setTimeout(() => {
     showSuccessMessage.value = false;
   }, 3000);
@@ -272,7 +300,7 @@ function showSuccess(message) {
 function showError(message) {
   errorMessage.value = message;
   showErrorMessage.value = true;
-  
+
   setTimeout(() => {
     showErrorMessage.value = false;
   }, 5000);
@@ -375,17 +403,17 @@ async function fetchRecipeDetails() {
 
 // --- DELETE RECIPE (owner only) ---
 function handleDeleteRecipe() {
-  showDeleteModal.value = true;  
+  showDeleteModal.value = true;
 }
 
 async function confirmDelete() {
   isDeleting.value = true;
-  
+
   try {
     await deleteRecipe(token.value, recipe.value._id);
     showDeleteModal.value = false;
     showSuccess("Recipe deleted!");
-    
+
     setTimeout(() => {
       router.push("/profile");
     }, 1500);
@@ -407,7 +435,7 @@ async function handleCopyRecipe() {
   try {
     const newRecipeId = await copyRecipe(token.value, recipe.value._id);
     showSuccess("Recipe copied to your recipes!");
-    
+
     setTimeout(() => {
       router.push("/profile");
     }, 1500);
@@ -426,9 +454,13 @@ function handleEditRecipe() {
 // --- ADD TO COLLECTION (all logged-in users) ---
 async function handleAddToCollection() {
   isLoadingCollections.value = true;
-  
+
   try {
-    const data = await viewRecipe(token.value, recipe.value.owner, recipe.value.title);
+    const data = await viewRecipe(
+      token.value,
+      recipe.value.owner,
+      recipe.value.title
+    );
     collectionsWithStatus.value = data.collectionsWithStatus || [];
     showCollectionModal.value = true;
   } catch (err) {
@@ -443,7 +475,11 @@ async function handleAddToCollection() {
 async function toggleCollection(collection) {
   try {
     if (collection.hasItem) {
-      await removeItemFromCollection(token.value, collection._id, recipe.value._id);
+      await removeItemFromCollection(
+        token.value,
+        collection._id,
+        recipe.value._id
+      );
       collection.hasItem = false;
       showSuccess(`Removed from "${collection.name}"`);
     } else {
@@ -524,6 +560,42 @@ async function handleRecipeSubmit(recipeData) {
   } catch (error) {
     console.error("Failed to create recipe:", error);
     alert(`Failed to create recipe: ${error.message}`);
+  }
+}
+
+async function handleParsedRecipeSubmit(submissionData) {
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
+
+  try {
+    const { parsedRecipeId, image, collection } = submissionData;
+
+    // Set image if provided
+    if (image?.trim()) {
+      try {
+        await setImage(token.value, parsedRecipeId, image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (collection && parsedRecipeId) {
+      try {
+        await addItemToCollection(token.value, collection, parsedRecipeId);
+        console.log(`Added recipe to collection: ${collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert("Recipe created successfully from link!");
+  } catch (error) {
+    console.error("Failed to update parsed recipe:", error);
+    alert(`Failed to update recipe: ${error.message}`);
   }
 }
 
@@ -872,7 +944,6 @@ function handleLogout() {
 .btn-done:hover {
   background: var(--color-primary-dark);
 }
-
 
 .delete-modal {
   max-width: 400px;

@@ -41,6 +41,7 @@
       :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
+      @submitParsed="handleParsedRecipeSubmit"
     />
 
     <!-- Add Collection Popup -->
@@ -82,6 +83,7 @@ import {
   searchRecipes,
 } from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
+import LoginPopup from "../components/LoginPopup.vue";
 
 const { token, isLoggedIn, logout, init } = useAuth();
 const showLogin = ref(false);
@@ -236,6 +238,45 @@ async function handleRecipeSubmit(recipeData) {
   } catch (error) {
     console.error("Failed to create recipe:", error);
     alert(`Failed to create recipe: ${error.message}`);
+  }
+}
+
+async function handleParsedRecipeSubmit(submissionData) {
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
+
+  try {
+    const { parsedRecipeId, image, collection } = submissionData;
+
+    // Set image if provided
+    if (image?.trim()) {
+      try {
+        await setImage(token.value, parsedRecipeId, image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (collection && parsedRecipeId) {
+      try {
+        await addItemToCollection(token.value, collection, parsedRecipeId);
+        console.log(`Added recipe to collection: ${collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert("Recipe created successfully from link!");
+
+    // Refresh recipes list
+    await fetchAllRecipes();
+  } catch (error) {
+    console.error("Failed to update parsed recipe:", error);
+    alert(`Failed to update recipe: ${error.message}`);
   }
 }
 

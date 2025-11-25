@@ -67,6 +67,7 @@
       :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
+      @submitParsed="handleParsedRecipeSubmit"
     />
 
     <!-- Add Collection Popup -->
@@ -111,6 +112,8 @@ import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
+import AddRecipePopup from "../components/AddRecipePopup.vue";
+import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import {
   viewCollection,
   getMyCollections,
@@ -123,6 +126,7 @@ import {
   getAllMyRecipes,
   getAllRecipesGlobal,
   parseIngredients,
+  setImage,
 } from "../api/Recipe.js";
 import { getProfileByUserId } from "../api/User.js";
 import { useAuth } from "../composables/useAuth.js";
@@ -168,7 +172,20 @@ onMounted(async () => {
   await init();
 
   await fetchCollectionDetails();
+  await fetchUserCollections();
 });
+
+async function fetchUserCollections() {
+  if (!token.value) return;
+
+  try {
+    const authToken = getToken();
+    const collections = await getMyCollections(authToken);
+    userCollections.value = collections;
+  } catch (error) {
+    console.error("Failed to fetch user collections:", error);
+  }
+}
 
 async function fetchCollectionDetails() {
   isLoading.value = true;
@@ -382,6 +399,118 @@ async function handleDeleteCollection() {
 async function handleLogout() {
   await logout();
   router.push("/");
+}
+
+async function handleRecipeSubmit(recipeData) {
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
+
+  try {
+    // Create recipe
+    const recipeId = await createRecipe(
+      token.value,
+      recipeData.name,
+      recipeData.link?.trim() || undefined,
+      recipeData.description?.trim() || undefined
+    );
+    console.log("Recipe created with ID:", recipeId);
+
+    // Set image separately if provided
+    if (recipeData.image?.trim()) {
+      try {
+        await setImage(token.value, recipeId, recipeData.image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add ingredients if provided
+    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
+      try {
+        const ingredients = await parseIngredients(
+          token.value,
+          recipeId,
+          recipeData.ingredientsText
+        );
+        console.log("Ingredients added:", ingredients);
+      } catch (error) {
+        console.error("Failed to add ingredients:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (recipeData.collection && recipeId) {
+      try {
+        await addItemToCollection(token.value, recipeData.collection, recipeId);
+        console.log(`Added recipe to collection: ${recipeData.collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert(`Recipe "${recipeData.name}" created successfully!`);
+
+    // Refresh collection details to show new recipe
+    await fetchCollectionDetails();
+  } catch (error) {
+    console.error("Failed to create recipe:", error);
+    alert(`Failed to create recipe: ${error.message}`);
+  }
+}
+
+async function handleParsedRecipeSubmit(submissionData) {
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
+
+  try {
+    const { parsedRecipeId, image, collection } = submissionData;
+
+    // Set image if provided
+    if (image?.trim()) {
+      try {
+        await setImage(token.value, parsedRecipeId, image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (collection && parsedRecipeId) {
+      try {
+        await addItemToCollection(token.value, collection, parsedRecipeId);
+        console.log(`Added recipe to collection: ${collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert("Recipe created successfully from link!");
+
+    // Refresh collection details to show new recipe
+    await fetchCollectionDetails();
+  } catch (error) {
+    console.error("Failed to update parsed recipe:", error);
+    alert(`Failed to update recipe: ${error.message}`);
+  }
+}
+
+function closeAddRecipePopup() {
+  isAddRecipePopupOpen.value = false;
+}
+
+function closeAddCollectionPopup() {
+  isAddCollectionPopupOpen.value = false;
+}
+
+function handleCollectionSubmit(collectionData) {
+  console.log("Collection submitted:", collectionData);
+  alert(`Collection "${collectionData.name}" created successfully!`);
 }
 
 // Helper functions for member display

@@ -27,6 +27,7 @@
       :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
+      @submitParsed="handleParsedRecipeSubmit"
     />
 
     <AddCollectionPopup
@@ -209,6 +210,39 @@ async function handleRecipeSubmit(recipeData) {
   } catch (error) {
     console.error("Failed to create recipe:", error);
     alert(`Failed to create recipe: ${error.message}`);
+  }
+}
+
+async function handleParsedRecipeSubmit(submissionData) {
+  try {
+    const authToken = getToken();
+    const { parsedRecipeId, image, collection } = submissionData;
+
+    // Set image if provided
+    if (image?.trim()) {
+      try {
+        await setImage(authToken, parsedRecipeId, image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (collection && parsedRecipeId) {
+      try {
+        await addItemToCollection(authToken, collection, parsedRecipeId);
+        await fetchCollections();
+        console.log(`Added recipe to collection: ${collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert("Recipe created successfully from link!");
+  } catch (error) {
+    console.error("Failed to update parsed recipe:", error);
+    alert(`Failed to update recipe: ${error.message}`);
   }
 }
 
