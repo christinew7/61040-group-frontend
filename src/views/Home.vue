@@ -7,6 +7,7 @@
       @recipe-search="handleRecipeSearch"
       @ingredient-filter-change="handleIngredientFilter"
       @profile-click="handleProfileClick"
+      @home-click="handleHomeClick"
       @sign-in="showLogin = true"
       @logout="handleLogout"
     />
@@ -243,6 +244,10 @@ function handleIngredientFilter(ingredients) {
 
 function handleProfileClick() {
   router.push("/profile");
+}
+
+function handleHomeClick() {
+  router.push("/");
 }
 
 function onRecipeClick(recipe) {

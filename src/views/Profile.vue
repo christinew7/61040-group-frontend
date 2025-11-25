@@ -5,6 +5,7 @@
       @add-recipe="handleAddRecipe"
       @add-collection="handleAddCollection"
       @profile-click="handleProfileClick"
+      @home-click="handleHomeClick"
     />
 
     <!-- Main Content -->
@@ -34,17 +35,19 @@
             >
               Edit
             </button>
-            <button 
-              v-else 
-              @click="saveDisplayName" 
+            <button
+              v-else
+              @click="saveDisplayName"
               class="btn-save"
               :disabled="isSaving"
             >
-              {{ isSaving ? 'Saving...' : 'Save' }}
+              {{ isSaving ? "Saving..." : "Save" }}
             </button>
           </div>
           <!-- Edit name messages -->
-          <p v-if="saveSuccess" class="success-name-edit">✓ Display name updated!</p>
+          <p v-if="saveSuccess" class="success-name-edit">
+            ✓ Display name updated!
+          </p>
           <p v-if="saveError" class="error-name-edit">✗ {{ saveError }}</p>
         </div>
 
@@ -156,9 +159,13 @@ import {
   addMemberToCollection,
   addItemToCollection,
 } from "../api/Collecting.js";
-import { createRecipe, parseIngredients, getAllMyRecipes } from "../api/Recipe.js";
+import {
+  createRecipe,
+  parseIngredients,
+  getAllMyRecipes,
+} from "../api/Recipe.js";
 import { getProfile, updateDisplayName, deleteAccount } from "../api/User.js";
-import RecipeDisplay from "../components/RecipeDisplay.vue"
+import RecipeDisplay from "../components/RecipeDisplay.vue";
 
 const router = useRouter();
 const { token, user, logout } = useAuth();
@@ -175,7 +182,7 @@ const isDeleteConfirmOpen = ref(false);
 
 // User account data
 const displayName = ref("");
-const originalDisplayName = ref("");;
+const originalDisplayName = ref("");
 const isEditingName = ref(false);
 
 // Collections data
@@ -265,7 +272,7 @@ async function saveDisplayName() {
     originalDisplayName.value = displayName.value;
     isEditingName.value = false;
     saveSuccess.value = true;
-    
+
     // Hide success message after 3 seconds
     setTimeout(() => {
       saveSuccess.value = false;
@@ -293,18 +300,18 @@ async function confirmDeleteAccount() {
     const authToken = getToken();
     await deleteAccount(authToken);
     await logout();
-    
+
     // Close confirmation popup
     isDeleteConfirmOpen.value = false;
-    
+
     // Redirect to home
     router.push("/");
-    
+
     // Optional: Show a success message on home page
     // (You'd need to pass this via route state or a global toast system)
   } catch (error) {
     console.error("Failed to delete account:", error);
-    
+
     // Close popup and show error inline
     isDeleteConfirmOpen.value = false;
     alert(`Failed to delete account: ${error.message}`);
@@ -329,9 +336,9 @@ function onRecipeClick(recipe) {
   router.push({
     name: "Recipe",
     params: { id: recipe._id },
-    query: { 
+    query: {
       owner: recipe.owner,
-      title: recipe.title 
+      title: recipe.title,
     },
   });
 }
@@ -467,6 +474,10 @@ async function handleCollectionSubmit(collectionData) {
 function handleProfileClick() {
   // Already on profile page, so do nothing or scroll to top
   console.log("Already on profile page");
+}
+
+function handleHomeClick() {
+  router.push("/");
 }
 </script>
 
@@ -697,7 +708,6 @@ function handleProfileClick() {
 .btn-retry:hover {
   background: var(--color-primary-dark);
 }
-
 
 /* Recipes Section */
 .recipes-section {

@@ -5,6 +5,7 @@
       @add-recipe="handleAddRecipe"
       @add-collection="handleAddCollection"
       @profile-click="handleProfileClick"
+      @home-click="handleHomeClick"
     />
 
     <!-- Main Content -->
@@ -263,6 +264,10 @@ function handleCollectionSubmit(collectionData) {
 
 function handleProfileClick() {
   router.push("/profile");
+}
+
+function handleHomeClick() {
+  router.push("/");
 }
 </script>
 

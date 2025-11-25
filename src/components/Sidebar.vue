@@ -1,15 +1,13 @@
 <template>
   <aside class="sidebar">
     <!-- Title -->
-    <div class="sidebar-title">
+    <div class="sidebar-title" @click="handleHomeClick">
       <h1>cooked!</h1>
     </div>
 
     <!-- Auth Section -->
     <div v-if="!isLoggedIn" class="auth-section">
-      <button @click="handleSignIn" class="signin-button">
-        Sign In
-      </button>
+      <button @click="handleSignIn" class="signin-button">Sign In</button>
     </div>
 
     <!-- My Profile Section (logged in only) -->
@@ -70,9 +68,7 @@
 
     <!-- Logout Button at Bottom (only when logged in) -->
     <div v-if="isLoggedIn" class="logout-section">
-      <button @click="handleLogout" class="logout-button">
-        Logout
-      </button>
+      <button @click="handleLogout" class="logout-button">Logout</button>
     </div>
   </aside>
 </template>
@@ -96,6 +92,7 @@ const emit = defineEmits([
   "recipe-search",
   "ingredient-filter-change",
   "profile-click",
+  "home-click",
   "sign-in",
   "logout",
 ]);
@@ -113,6 +110,10 @@ function handleSignIn() {
 
 function handleProfileClick() {
   emit("profile-click");
+}
+
+function handleHomeClick() {
+  emit("home-click");
 }
 
 function handleAddRecipe() {

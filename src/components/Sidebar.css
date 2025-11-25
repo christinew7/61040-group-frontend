@@ -17,6 +17,12 @@
   font-weight: 700;
   color: var(--color-primary);
   text-align: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.sidebar-title h1:hover {
+  opacity: 0.8;
 }
 
 /* Profile Section */
