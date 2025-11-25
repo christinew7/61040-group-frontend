@@ -173,14 +173,14 @@ async function handleRecipeSubmit(recipeData) {
       authToken,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
-      recipeData.image?.trim() || undefined
+      recipeData.description?.trim() || undefined
     );
 
-    // Set image if provided
+    // Set image separately if provided
     if (recipeData.image?.trim()) {
       try {
         await setImage(authToken, recipeId, recipeData.image);
+        console.log("Image set successfully");
       } catch (error) {
         console.error("Failed to set image:", error);
       }
@@ -205,6 +205,15 @@ async function handleRecipeSubmit(recipeData) {
 
     alert(`Recipe "${recipeData.name}" created successfully!`);
 
+    // Refresh recipes and collections
+    await fetchRecipes();
+    await fetchCollections();
+    
+    // Force refresh the current view if on profile page
+    if (route.name === 'Profile') {
+      router.go(0); // Reload the current route
+    }
+    
     // If on a collection or home page, we might want to refresh the view
     // For now, just navigating to the new recipe or staying put is fine
   } catch (error) {
@@ -240,6 +249,15 @@ async function handleParsedRecipeSubmit(submissionData) {
     }
 
     alert("Recipe created successfully from link!");
+    
+    // Refresh recipes and collections
+    await fetchRecipes();
+    await fetchCollections();
+    
+    // Force refresh the current view if on profile page
+    if (route.name === 'Profile') {
+      router.go(0); // Reload the current route
+    }
   } catch (error) {
     console.error("Failed to update parsed recipe:", error);
     alert(`Failed to update recipe: ${error.message}`);

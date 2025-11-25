@@ -453,8 +453,9 @@ async function handleRecipeSubmit(recipeData) {
 
     alert(`Recipe "${recipeData.name}" created successfully!`);
 
-    // Refresh collection details to show new recipe
+    // Always refresh collection details to show potentially new recipe
     await fetchCollectionDetails();
+    await fetchUserCollections();
   } catch (error) {
     console.error("Failed to create recipe:", error);
     alert(`Failed to create recipe: ${error.message}`);
@@ -492,8 +493,9 @@ async function handleParsedRecipeSubmit(submissionData) {
 
     alert("Recipe created successfully from link!");
 
-    // Refresh collection details to show new recipe
+    // Always refresh collection details to show potentially new recipe
     await fetchCollectionDetails();
+    await fetchUserCollections();
   } catch (error) {
     console.error("Failed to update parsed recipe:", error);
     alert(`Failed to update recipe: ${error.message}`);

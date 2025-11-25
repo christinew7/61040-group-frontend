@@ -280,8 +280,10 @@ async function parseRecipeFromLink() {
 
   try {
     console.log("Parsing recipe from link:", formData.value.link);
+    console.log("Token being sent:", token.value ? `${token.value.substring(0, 20)}...` : "NO TOKEN");
     const recipe = await parseFromLink(token.value, formData.value.link);
     console.log("Parsed recipe response:", recipe);
+    console.log("Recipe owner:", recipe.owner);
 
     if (!recipe || !recipe._id) {
       throw new Error("Invalid recipe response from server");
@@ -290,7 +292,7 @@ async function parseRecipeFromLink() {
     parsedRecipe.value = recipe;
     isParsed.value = true;
     parseError.value = "";
-    console.log("Recipe parsed successfully, ID:", recipe._id);
+    console.log("Recipe parsed successfully, ID:", recipe._id, "Owner:", recipe.owner);
   } catch (error) {
     console.error("Error parsing recipe from link:", error);
     parseError.value = error.message || "Failed to parse recipe from link";
