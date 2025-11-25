@@ -16,7 +16,7 @@
 
       <!-- Main Content Area -->
       <div class="main-content">
-        <Header @sign-in="showLogin = true" />
+        <Header v-if="shouldShowHeader" @sign-in="showLogin = true" />
         <router-view />
       </div>
     </div>
@@ -31,6 +31,7 @@
 
     <AddCollectionPopup
       :isOpen="isAddCollectionPopupOpen"
+      :recipes="userRecipes"
       @close="closeAddCollectionPopup"
       @submit="handleCollectionSubmit"
     />
@@ -54,7 +55,7 @@ import LoginPopup from "./components/LoginPopup.vue";
 import AddRecipePopup from "./components/AddRecipePopup.vue";
 import AddCollectionPopup from "./components/AddCollectionPopup.vue";
 import { getMyCollections, createCollection, addMemberToCollection, addItemToCollection } from "./api/Collecting.js";
-import { createRecipe, parseIngredients, setImage } from "./api/Recipe.js";
+import { createRecipe, parseIngredients, setImage, getAllMyRecipes } from "./api/Recipe.js";
 import "./utils/app.css";
 
 const router = useRouter();
@@ -67,14 +68,21 @@ const showLogin = ref(false);
 const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
 const userCollections = ref([]);
+const userRecipes = ref([]);
 
 // Show search only on Home page
 const shouldShowSearch = computed(() => route.name === 'Home');
+
+// Hide header on pages that have their own navbar
+const shouldShowHeader = computed(() => {
+  return !['Collection', 'Recipe', 'Profile'].includes(route.name);
+});
 
 onMounted(async () => {
   await init();
   if (isLoggedIn.value) {
     await fetchCollections();
+    await fetchRecipes();
   }
 });
 
@@ -91,6 +99,17 @@ async function fetchCollections() {
     userCollections.value = response;
   } catch (error) {
     console.error("Failed to fetch collections:", error);
+  }
+}
+
+async function fetchRecipes() {
+  if (!isLoggedIn.value) return;
+  try {
+    const authToken = getToken();
+    const response = await getAllMyRecipes(authToken);
+    userRecipes.value = response;
+  } catch (error) {
+    console.error("Failed to fetch recipes:", error);
   }
 }
 

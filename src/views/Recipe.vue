@@ -1,70 +1,91 @@
 <template>
-  <div class="recipe-content">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="loading-state">Loading recipe...</div>
+  <div class="recipe-layout">
+    <!-- Main Content -->
+    <div class="recipe-content">
+      <!-- Top Navbar -->
+      <Navbar title="recipe" />
 
-    <!-- Error State -->
-    <div v-else-if="error" class="error-state">
-      <p>Error loading recipe: {{ error }}</p>
-      <button @click="fetchRecipeDetails" class="btn-retry">Retry</button>
-    </div>
+      <!-- Loading State -->
+      <div v-if="isLoading" class="loading-state">Loading recipe...</div>
 
-    <!-- Recipe Details -->
-    <div v-else class="recipe-details">
-      <!-- Recipe Header with Image -->
-      <div class="recipe-header">
-        <div class="recipe-image-container">
-          <img
-            :src="recipe.image || defaultImage"
-            :alt="recipe.title"
-            class="recipe-image"
-          />
-        </div>
-        <div class="recipe-title-section">
-          <h1 class="recipe-title">{{ recipe.title }}</h1>
-          <div v-if="recipe.link" class="recipe-link-container">
-            <a
-              :href="recipe.link"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="recipe-link"
-            >
-              🔗 View Original Recipe
-            </a>
-          </div>
-        </div>
+      <!-- Error State -->
+      <div v-else-if="error" class="error-state">
+        <p>Error loading recipe: {{ error }}</p>
+        <button @click="fetchRecipeDetails" class="btn-retry">Retry</button>
       </div>
 
-      <!-- Recipe Description -->
-      <section v-if="recipe.description" class="recipe-section">
-        <h2>Description</h2>
-        <p class="recipe-description">{{ recipe.description }}</p>
-      </section>
-
-      <!-- Ingredients List -->
-      <section class="recipe-section">
-        <h2>Ingredients</h2>
-        <div v-if="recipe.ingredients && recipe.ingredients.length > 0">
-          <ul class="ingredients-list">
-            <li
-              v-for="(ingredient, index) in recipe.ingredients"
-              :key="index"
-              class="ingredient-item"
-            >
-              <span v-if="ingredient.quantity" class="ingredient-quantity">
-                {{ ingredient.quantity }}
-              </span>
-              <span v-if="ingredient.unit" class="ingredient-unit">
-                {{ ingredient.unit }}
-              </span>
-              <span class="ingredient-name">
-                {{ ingredient.name }}
-              </span>
-            </li>
-          </ul>
+      <!-- Recipe Details -->
+      <div v-else class="recipe-details">
+        <!-- Recipe Header with Image -->
+        <div class="recipe-header">
+          <div class="recipe-image-container">
+            <img
+              :src="recipe.image || defaultImage"
+              :alt="recipe.title"
+              class="recipe-image"
+            />
+          </div>
+          <div class="recipe-title-section">
+            <h1 class="recipe-title">{{ recipe.title }}</h1>
+            <div v-if="recipe.link" class="recipe-link-container">
+              <a
+                :href="recipe.link"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="recipe-link"
+              >
+                🔗 View Original Recipe
+              </a>
+            </div>
+          </div>
         </div>
-        <p v-else class="empty-state">No ingredients listed yet.</p>
-      </section>
+
+        <!-- Recipe Description -->
+        <section v-if="recipe.description" class="recipe-section">
+          <h2>Description</h2>
+          <p class="recipe-description">{{ recipe.description }}</p>
+        </section>
+
+        <!-- Ingredients List -->
+        <section class="recipe-section">
+          <h2>Ingredients</h2>
+          <div v-if="recipe.ingredients && recipe.ingredients.length > 0">
+            <ul class="ingredients-list">
+              <li
+                v-for="(ingredient, index) in recipe.ingredients"
+                :key="index"
+                class="ingredient-item"
+              >
+                <span v-if="ingredient.quantity" class="ingredient-quantity">
+                  {{ ingredient.quantity }}
+                </span>
+                <span v-if="ingredient.unit" class="ingredient-unit">
+                  {{ ingredient.unit }}
+                </span>
+                <span class="ingredient-name">
+                  {{ ingredient.name }}
+                </span>
+              </li>
+            </ul>
+          </div>
+          <p v-else class="empty-state">No ingredients listed yet.</p>
+        </section>
+      </div>
+
+      <!-- Add Recipe Popup -->
+      <AddRecipePopup
+        :isOpen="isAddRecipePopupOpen"
+        :collections="userCollections"
+        @close="closeAddRecipePopup"
+        @submit="handleRecipeSubmit"
+      />
+
+      <!-- Add Collection Popup -->
+      <AddCollectionPopup
+        :isOpen="isAddCollectionPopupOpen"
+        @close="closeAddCollectionPopup"
+        @submit="handleCollectionSubmit"
+      />
     </div>
   </div>
 </template>
@@ -72,13 +93,23 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { getRecipe } from "../api/Recipe.js";
+import Sidebar from "../components/Sidebar.vue";
+import Navbar from "../components/Navbar.vue";
+import AddRecipePopup from "../components/AddRecipePopup.vue";
+import AddCollectionPopup from "../components/AddCollectionPopup.vue";
+import {
+  getRecipe,
+  createRecipe,
+  parseIngredients,
+  setImage,
+} from "../api/Recipe.js";
+import { getMyCollections, addItemToCollection } from "../api/Collecting.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useHeader } from "../composables/useHeader.js";
 
 const router = useRouter();
 const route = useRoute();
-const { token, isLoggedIn } = useAuth();
+const { token, isLoggedIn, logout } = useAuth();
 const { setTitle, setBreadcrumbs } = useHeader();
 
 // Recipe data
@@ -95,30 +126,58 @@ const error = ref(null);
 
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
-
 // Fetch recipe details on mount
 onMounted(async () => {
   await fetchRecipeDetails();
 });
+
+async function fetchCollections() {
+  if (!token.value) return; // Skip if not logged in
+
+  try {
+    const response = await getMyCollections(token.value);
+    userCollections.value = response;
+  } catch (error) {
+    console.error("Failed to fetch collections:", error);
+  }
+}
 
 async function fetchRecipeDetails() {
   isLoading.value = true;
   error.value = null;
 
   try {
+    // First, try to get recipe from query params (passed from collection/profile)
+    if (route.query.recipe) {
+      try {
+        recipe.value = JSON.parse(decodeURIComponent(route.query.recipe));
+        console.log("Recipe loaded from query params:", recipe.value);
+        console.log("Recipe image:", recipe.value?.image);
+        console.log("Recipe ingredients:", recipe.value?.ingredients);
+        isLoading.value = false;
+        return;
+      } catch (parseErr) {
+        console.error("Failed to parse recipe from query params:", parseErr);
+        // Continue to API fallback
+      }
+    }
+
+    // Fallback: Try to fetch from API using owner and title
     const owner = route.query.owner;
     const title = route.query.title;
 
     if (!owner || !title) {
-      throw new Error("Recipe information missing. Please navigate from your profile or collections.");
+      throw new Error(
+        "Recipe information missing. Please navigate from your profile or collections."
+      );
     }
 
     console.log("Fetching recipe:", { owner, title });
 
     // Use public getRecipe (no auth needed)
     const data = await getRecipe(owner, title);
-    console.log("Raw API response:", data)
-    
+    console.log("Raw API response:", data);
+
     // Extract recipe from response
     let recipes = data;
     if (Array.isArray(recipes) && recipes.length > 0) {
@@ -129,31 +188,38 @@ async function fetchRecipeDetails() {
     }
 
     recipe.value = Array.isArray(recipes) ? recipes[0] : recipes;
-    
+
     setTitle("recipe");
-    
+
     // Determine breadcrumbs based on context
     const from = route.query.from;
     let breadcrumbs = [];
 
-    if (from === 'profile') {
+    if (from === "profile") {
       breadcrumbs = [
-        { label: 'My Profile', route: '/profile' },
-        { label: recipe.value.title }
+        { label: "My Profile", route: "/profile" },
+        { label: recipe.value.title },
       ];
-    } else if (from === 'collection') {
+    } else if (from === "collection") {
       const collectionId = route.query.collectionId;
-      const collectionName = route.query.collectionName || 'Collection';
+      const collectionName = route.query.collectionName || "Collection";
       breadcrumbs = [
-        { label: 'My Profile', route: '/profile' },
-        { label: collectionName, route: { name: 'Collection', params: { id: collectionId }, query: { name: collectionName } } },
-        { label: recipe.value.title }
+        { label: "My Profile", route: "/profile" },
+        {
+          label: collectionName,
+          route: {
+            name: "Collection",
+            params: { id: collectionId },
+            query: { name: collectionName },
+          },
+        },
+        { label: recipe.value.title },
       ];
     } else {
       // Default to Home
       breadcrumbs = [
-        { label: 'Home', route: '/' },
-        { label: recipe.value.title }
+        { label: "Home", route: "/" },
+        { label: recipe.value.title },
       ];
     }
 
@@ -168,6 +234,99 @@ async function fetchRecipeDetails() {
   } finally {
     isLoading.value = false;
   }
+}
+
+function handleAddRecipe() {
+  console.log("Add recipe clicked");
+  isAddRecipePopupOpen.value = true;
+}
+
+function closeAddRecipePopup() {
+  isAddRecipePopupOpen.value = false;
+}
+
+async function handleRecipeSubmit(recipeData) {
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
+
+  try {
+    // Create recipe WITHOUT image
+    const recipeId = await createRecipe(
+      token.value,
+      recipeData.name,
+      recipeData.link?.trim() || undefined,
+      recipeData.description?.trim() || undefined
+    );
+    console.log("Recipe created with ID:", recipeId);
+
+    // Set image separately if provided
+    if (recipeData.image?.trim()) {
+      try {
+        await setImage(token.value, recipeId, recipeData.image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add ingredients if provided
+    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
+      try {
+        const ingredients = await parseIngredients(
+          token.value,
+          recipeId,
+          recipeData.ingredientsText
+        );
+        console.log("Ingredients added:", ingredients);
+      } catch (error) {
+        console.error("Failed to add ingredients:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (recipeData.collection && recipeId) {
+      try {
+        await addItemToCollection(token.value, recipeData.collection, recipeId);
+        console.log(`Added recipe to collection: ${recipeData.collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert(`Recipe "${recipeData.name}" created successfully!`);
+  } catch (error) {
+    console.error("Failed to create recipe:", error);
+    alert(`Failed to create recipe: ${error.message}`);
+  }
+}
+
+function handleAddCollection() {
+  console.log("Add collection clicked");
+  isAddCollectionPopupOpen.value = true;
+}
+
+function closeAddCollectionPopup() {
+  isAddCollectionPopupOpen.value = false;
+}
+
+function handleCollectionSubmit(collectionData) {
+  console.log("Collection submitted:", collectionData);
+  alert(`Collection "${collectionData.name}" created successfully!`);
+}
+
+function handleProfileClick() {
+  router.push("/profile");
+}
+
+function handleHomeClick() {
+  router.push("/");
+}
+
+function handleLogout() {
+  logout();
+  router.push("/");
 }
 </script>
 

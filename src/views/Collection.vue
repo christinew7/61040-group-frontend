@@ -1,61 +1,178 @@
 <template>
-  <div class="collection-content">
-    <!-- Loading State -->
-    <div v-if="isLoading" class="loading-state">Loading collection...</div>
+  <div class="collection-layout">
+    <!-- Main Content -->
+    <div class="collection-content">
+      <!-- Top Navbar with Collection Name -->
+      <div class="collection-navbar">
+        <h1>{{ collectionName }}</h1>
+        <div class="collection-actions">
+          <button @click="showAddMemberDialog" class="btn-action">
+            + Add Member
+          </button>
+          <button
+            v-if="isOwner"
+            @click="handleDeleteCollection"
+            class="btn-action btn-danger"
+          >
+            Delete Collection
+          </button>
+        </div>
+      </div>
 
-    <!-- Error State -->
-    <div v-else-if="error" class="error-state">
-      <p>Error loading collection: {{ error }}</p>
-      <button @click="fetchCollectionDetails" class="btn-retry">Retry</button>
+      <!-- Loading State -->
+      <div v-if="isLoading" class="loading-state">Loading collection...</div>
+
+      <!-- Error State -->
+      <div v-else-if="error" class="error-state">
+        <p>Error loading collection: {{ error }}</p>
+        <button @click="fetchCollectionDetails" class="btn-retry">Retry</button>
+      </div>
+
+      <!-- Collection Recipes -->
+      <div v-else class="recipes-section">
+        <!-- View Members Button and Dropdown -->
+        <div class="members-section">
+          <button @click="toggleMembersDropdown" class="btn-view-members">
+            {{ isMembersDropdownOpen ? "▼" : "▶" }} View Members ({{
+              members.length
+            }})
+          </button>
+
+          <!-- Members Dropdown -->
+          <div v-if="isMembersDropdownOpen" class="members-dropdown">
+            <h3>Collection Members</h3>
+            <div v-if="members.length > 0" class="members-list">
+              <div
+                v-for="member in members"
+                :key="member.userId || member._id || member"
+                class="member-item"
+              >
+                <span class="member-name">{{
+                  getMemberDisplayName(member)
+                }}</span>
+                <span
+                  v-if="getMemberUserId(member) === collectionOwner"
+                  class="owner-badge"
+                  >Owner</span
+                >
+              </div>
+            </div>
+            <p v-else class="empty-members">
+              No members in this collection yet.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="recipes.length > 0" class="recipes-grid">
+          <RecipeDisplay
+            v-for="recipe in recipes"
+            :key="recipe._id"
+            :recipe="recipe"
+            @click="onRecipeClick"
+          />
+        </div>
+        <p v-else class="empty-state">
+          This collection doesn't have any recipes yet. Add some from the
+          sidebar!
+        </p>
+      </div>
     </div>
 
-    <!-- Collection Recipes -->
-    <div v-else class="recipes-section">
-      <div v-if="recipes.length > 0" class="recipes-grid">
-        <RecipeDisplay
-          v-for="recipe in recipes"
-          :key="recipe._id"
-          :recipe="recipe"
-          @click="onRecipeClick"
+    <!-- Add Recipe Popup -->
+    <AddRecipePopup
+      :isOpen="isAddRecipePopupOpen"
+      :collections="userCollections"
+      @close="closeAddRecipePopup"
+      @submit="handleRecipeSubmit"
+    />
+
+    <!-- Add Collection Popup -->
+    <AddCollectionPopup
+      :isOpen="isAddCollectionPopupOpen"
+      :recipes="recipes"
+      @close="closeAddCollectionPopup"
+      @submit="handleCollectionSubmit"
+    />
+
+    <!-- Add Member Dialog -->
+    <div
+      v-if="isAddMemberDialogOpen"
+      class="modal-overlay"
+      @click="closeAddMemberDialog"
+    >
+      <div class="modal-content" @click.stop>
+        <h2>Add Member to Collection</h2>
+        <p>Enter the email address of the user you want to add:</p>
+        <input
+          v-model="newMemberEmail"
+          type="email"
+          placeholder="user@example.com"
+          class="member-input"
+          @keydown.enter="handleAddMember"
         />
+        <div class="modal-actions">
+          <button @click="handleAddMember" class="btn-primary">
+            Add Member
+          </button>
+          <button @click="closeAddMemberDialog" class="btn-secondary">
+            Cancel
+          </button>
+        </div>
       </div>
-      <p v-else class="empty-state">
-        This collection doesn't have any recipes yet. Add some from the
-        sidebar!
-      </p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
+import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
 import {
   viewCollection,
   getMyCollections,
   addItemToCollection,
+  deleteCollection,
+  addMemberToCollection,
 } from "../api/Collecting.js";
 import {
   createRecipe,
   getAllMyRecipes,
+  getAllRecipesGlobal,
   parseIngredients,
 } from "../api/Recipe.js";
+import { getProfileByUserId } from "../api/User.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useHeader } from "../composables/useHeader.js";
 
 const router = useRouter();
 const route = useRoute();
-const { token } = useAuth();
+const { token, logout, user, init } = useAuth();
 const { setTitle, setBreadcrumbs } = useHeader();
 
 // Collection data
 const collectionId = ref(route.params.id);
 const collectionName = ref("");
+const collectionOwner = ref("");
 const recipes = ref([]);
 const members = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
+
+// Computed property to check if current user is the collection owner
+const isOwner = computed(() => {
+  return user.value?.userId === collectionOwner.value;
+});
+
+// Popup state
+const isAddRecipePopupOpen = ref(false);
+const isAddCollectionPopupOpen = ref(false);
+const isAddMemberDialogOpen = ref(false);
+const isMembersDropdownOpen = ref(false);
+const newMemberEmail = ref("");
+
+// Collections data for recipe popup
+const userCollections = ref([]);
 
 // Helper function to get auth token
 function getToken() {
@@ -64,6 +181,9 @@ function getToken() {
 
 // Fetch collection details on mount
 onMounted(async () => {
+  // Initialize auth (fetch user profile if not already loaded)
+  await init();
+
   await fetchCollectionDetails();
 });
 
@@ -75,30 +195,109 @@ async function fetchCollectionDetails() {
     const authToken = getToken();
     const data = await viewCollection(authToken, collectionId.value);
 
+    console.log("Collection data:", data);
+
     // viewCollection returns { items: [...], members: [...] }
     // items are recipe IDs (strings), not full recipe objects
     const recipeIds = data.items || [];
-    members.value = data.members || [];
-
-    // Fetch all user's recipes
-    const allRecipes = await getAllMyRecipes(authToken);
-
-    // Filter to only show recipes that are in this collection
-    recipes.value = allRecipes.filter((recipe) =>
-      recipeIds.includes(recipe._id)
-    );
+    const memberIds = data.members || [];
 
     console.log("Collection recipe IDs:", recipeIds);
+    console.log("Number of recipe IDs in collection:", recipeIds.length);
+    console.log("Collection member IDs:", memberIds);
+
+    // Fetch member details if we have member IDs
+    if (memberIds.length > 0) {
+      // TODO: Backend bug - getProfile returns current user's profile for all userIds
+      // For now, just use the user IDs directly
+      members.value = memberIds.map((id) => ({
+        userId: id,
+        displayName: null, // Will show userId instead
+      }));
+      console.log(
+        "Using member IDs directly (backend not returning correct profiles):",
+        members.value
+      );
+
+      /* Disabled until backend is fixed to return correct profiles
+      const memberDetails = await Promise.all(
+        memberIds.map(async (memberId) => {
+          try {
+            console.log(
+              "Fetching profile for member ID:",
+              memberId,
+              "Type:",
+              typeof memberId
+            );
+            // If it's already an object with displayName, return it
+            if (typeof memberId === "object" && memberId.displayName) {
+              console.log("Member already has displayName:", memberId);
+              return memberId;
+            }
+            // Otherwise fetch user profile
+            const userProfile = await getProfileByUserId(authToken, memberId);
+            console.log("Fetched profile for", memberId, ":", userProfile);
+            return userProfile;
+          } catch (error) {
+            console.error(
+              `Failed to fetch info for member ${memberId}:`,
+              error
+            );
+            // Return a fallback object
+            return {
+              userId: memberId,
+              displayName: `User (${memberId.substring(0, 8)}...)`,
+            };
+          }
+        })
+      );
+      members.value = memberDetails;
+      console.log("Fetched member details:", members.value);
+      console.log("First member:", members.value[0]);
+      */
+    } else {
+      members.value = [];
+    }
+
+    // Fetch all recipes globally (needed for shared collections where recipes belong to other users)
+    const allRecipes = await getAllRecipesGlobal();
+    console.log("All global recipes fetched:", allRecipes.length);
+    console.log("First few global recipes:", allRecipes.slice(0, 3));
+
+    // Filter to only show recipes that are in this collection
+    recipes.value = allRecipes.filter((recipe) => {
+      const isMatch = recipeIds.includes(recipe._id);
+      if (isMatch) {
+        console.log("Match found for recipe:", recipe._id, recipe.title);
+      }
+      return isMatch;
+    });
+
     console.log("Filtered recipes:", recipes.value);
+    console.log("Number of filtered recipes:", recipes.value.length);
+
+    // If we have recipe IDs but no matches, log for debugging
+    if (recipeIds.length > 0 && recipes.value.length === 0) {
+      console.warn("Collection has recipe IDs but no matching recipes found!");
+      console.log("Sample recipe ID from collection:", recipeIds[0]);
+      console.log("Sample recipe ID from global:", allRecipes[0]?._id);
+    }
 
     // Get collection name from route query or use a default
     collectionName.value = route.query.name || "Collection";
-    
+
     setTitle(collectionName.value);
     setBreadcrumbs([
-      { label: 'My Profile', route: '/profile' },
-      { label: collectionName.value }
+      { label: "My Profile", route: "/profile" },
+      { label: collectionName.value },
     ]);
+    collectionOwner.value = route.query.owner || "";
+
+    console.log("Collection owner:", collectionOwner.value);
+    console.log("Current user object:", user.value);
+    console.log("Current user ID:", user.value?.id);
+    console.log("Current user _id:", user.value?._id);
+    console.log("Is owner:", isOwner.value);
   } catch (err) {
     console.error("Failed to fetch collection details:", err);
     error.value = err.message;
@@ -116,18 +315,170 @@ function onRecipeClick(recipe) {
     query: {
       owner: recipe.owner,
       title: recipe.title,
-      from: 'collection',
+      from: "collection",
       collectionId: collectionId.value,
-      collectionName: collectionName.value
+      collectionName: collectionName.value,
     },
   });
+}
+
+function showAddMemberDialog() {
+  isAddMemberDialogOpen.value = true;
+  newMemberEmail.value = "";
+}
+
+function closeAddMemberDialog() {
+  isAddMemberDialogOpen.value = false;
+  newMemberEmail.value = "";
+}
+
+function toggleMembersDropdown() {
+  isMembersDropdownOpen.value = !isMembersDropdownOpen.value;
+}
+
+async function handleAddMember() {
+  if (!newMemberEmail.value || !newMemberEmail.value.trim()) {
+    alert("Please enter a valid email address");
+    return;
+  }
+
+  try {
+    const authToken = getToken();
+    await addMemberToCollection(
+      authToken,
+      collectionId.value,
+      newMemberEmail.value.trim()
+    );
+    alert(`Successfully added ${newMemberEmail.value} to the collection!`);
+    closeAddMemberDialog();
+    // Refresh collection to update members list
+    await fetchCollectionDetails();
+  } catch (error) {
+    console.error("Failed to add member:", error);
+    alert(`Failed to add member: ${error.message}`);
+  }
+}
+
+async function handleDeleteCollection() {
+  const confirmed = confirm(
+    `Are you sure you want to delete "${collectionName.value}"? This action cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const authToken = getToken();
+    await deleteCollection(authToken, collectionId.value);
+    alert(`Collection "${collectionName.value}" has been deleted.`);
+    // Navigate back to profile page
+    router.push("/profile");
+  } catch (error) {
+    console.error("Failed to delete collection:", error);
+    alert(`Failed to delete collection: ${error.message}`);
+  }
+}
+
+async function handleLogout() {
+  await logout();
+  router.push("/");
+}
+
+// Helper functions for member display
+function getMemberDisplayName(member) {
+  // If member is a string (just user ID), return shortened version
+  if (typeof member === "string") {
+    return `User ${member.substring(0, 8)}...`;
+  }
+  // If displayName is null or empty, show shortened userId
+  if (!member?.displayName) {
+    const userId = member?.userId || member?._id || "unknown";
+    return `User ${userId.substring(0, 8)}...`;
+  }
+  // Otherwise show displayName or email
+  return member.displayName || member.email || "Unknown User";
+}
+
+function getMemberUserId(member) {
+  // If member is a string, it is the user ID
+  if (typeof member === "string") {
+    return member;
+  }
+  // If member is an object, get userId or _id
+  const userId = member?.userId || member?._id || member;
+  console.log(
+    "getMemberUserId for",
+    member,
+    "->",
+    userId,
+    "comparing with owner:",
+    collectionOwner.value
+  );
+  return userId;
 }
 </script>
 
 <style scoped>
+.collection-layout {
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+
 .collection-content {
   flex: 1;
   background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+/* Top Navbar */
+.collection-navbar {
+  background: white;
+  border-bottom: 2px solid var(--color-primary);
+  padding: 1.5rem 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.collection-navbar h1 {
+  margin: 0;
+  font-size: 1.75rem;
+  color: var(--color-primary);
+  text-transform: lowercase;
+}
+
+.collection-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-action {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-action:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
 }
 
 /* Recipes Section */
@@ -179,5 +530,182 @@ function onRecipeClick(recipe) {
 
 .btn-retry:hover {
   background: var(--color-primary-dark);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h2 {
+  margin: 0 0 1rem 0;
+  color: var(--color-primary);
+  font-size: 1.5rem;
+}
+
+.modal-content p {
+  margin: 0 0 1rem 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.member-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  box-sizing: border-box;
+}
+
+.member-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+/* Members Dropdown */
+.members-section {
+  margin-bottom: 2rem;
+}
+
+.btn-view-members {
+  padding: 0.75rem 1.5rem;
+  background: white;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.btn-view-members:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+.members-dropdown {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.members-dropdown h3 {
+  margin: 0 0 1rem 0;
+  color: var(--color-primary);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.member-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.member-item:hover {
+  background: #f3f4f6;
+}
+
+.member-name {
+  color: #374151;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.owner-badge {
+  background: var(--color-primary);
+  color: white;
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.empty-members {
+  color: #9ca3af;
+  font-size: 0.95rem;
+  text-align: center;
+  padding: 1rem;
+  margin: 0;
 }
 </style>

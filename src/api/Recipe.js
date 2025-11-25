@@ -135,6 +135,69 @@ export async function getAllRecipesGlobal() {
 }
 
 /**
+ * @route POST api/Recipe/_search
+ * @desc Search recipes by title
+ * @param {string} query - The query to search for in recipe titles
+ * @returns {Promise<Array>} Array of matching recipes
+ */
+export async function searchRecipes(query) {
+  if (typeof query !== "string") {
+    throw new TypeError("Query is required.");
+  }
+
+  try {
+    console.log("searchRecipes API called with query:", query);
+    const response = await api.post("/_search", { query });
+    console.log("searchRecipes response:", response.data);
+
+    // Handle empty or invalid response
+    if (!response.data) {
+      console.log("No data in response, returning empty array");
+      return [];
+    }
+
+    // Check if response contains an error
+    // Backend returns [{ error: "..." }] or [{ recipes: [...] }]
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        const errorMsg = response.data[0].error;
+        console.error("Backend returned error:", errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // Extract recipes from [{ recipes: [...] }]
+      // Backend returns recipe IDs, so we need to fetch full recipes
+      if (response.data[0].recipes) {
+        const recipeIds = response.data[0].recipes;
+        console.log("Search returned recipe IDs:", recipeIds);
+
+        // Fetch all recipes and filter by IDs
+        const allRecipesResponse = await api.post("/_getAllRecipesGlobal");
+        const allRecipes = Array.isArray(allRecipesResponse.data)
+          ? allRecipesResponse.data.map((item) => item.recipe)
+          : [];
+
+        // Filter to only include recipes with matching IDs
+        const matchingRecipes = allRecipes.filter((recipe) =>
+          recipeIds.includes(recipe._id)
+        );
+
+        console.log("Search results:", matchingRecipes.length, "recipes found");
+        return matchingRecipes;
+      }
+    }
+
+    console.log("Unexpected response format, returning empty array");
+    return [];
+  } catch (err) {
+    console.error("searchRecipes error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to search recipes."
+    );
+  }
+}
+
+/**
  * @route POST api/Recipe/viewRecipe
  * @desc View a specific recipe by owner and title.
  */
@@ -420,5 +483,32 @@ export async function editIngredient(
     return true;
   } catch (err) {
     throw new Error(err.response?.data?.error || "Failed to edit ingredient.");
+  }
+}
+
+/**
+ * @route POST api/Recipe/_search
+ * @param {string} query
+ * @returns {Promise<Array>} Array of RecipeDoc objects
+ */
+export async function search(query) {
+  try {
+    if (!query || query.trim().length === 0) {
+      // Avoid network call for empty query
+      return [];
+    }
+
+    const response = await api.post("/_search", { query });
+    const result = response.data;
+
+    // Check for error object inside array
+    if (result.length > 0 && result[0].error) {
+      throw new Error(result[0].error);
+    }
+
+    // Now returns: [{_id:..., title: "Soup", ...}, {...}]
+    return result[0]?.recipes || [];
+  } catch (err) {
+    throw new Error(err.response?.data?.error || err.message);
   }
 }
