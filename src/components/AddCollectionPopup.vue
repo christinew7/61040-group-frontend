@@ -145,14 +145,19 @@ function removeSharedUser(user) {
 }
 
 function addRecipe() {
-  if (selectedRecipeId.value && !formData.value.recipes.includes(selectedRecipeId.value)) {
+  if (
+    selectedRecipeId.value &&
+    !formData.value.recipes.includes(selectedRecipeId.value)
+  ) {
     formData.value.recipes.push(selectedRecipeId.value);
     selectedRecipeId.value = "";
   }
 }
 
 function removeRecipe(recipeId) {
-  formData.value.recipes = formData.value.recipes.filter(id => id !== recipeId);
+  formData.value.recipes = formData.value.recipes.filter(
+    (id) => id !== recipeId
+  );
 }
 
 function handleClose() {
