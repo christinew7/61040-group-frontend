@@ -11,11 +11,6 @@
       <div v-if="isLoggedIn" class="profile-label" @click="handleProfileClick">My Profile</div>
     </div>
 
-    <!-- Auth Section -->
-    <div v-if="!isLoggedIn" class="auth-section">
-      <button @click="handleSignIn" class="signin-button">Sign In</button>
-    </div>
-
     <!-- Action Buttons (always visible) -->
     <div class="subtabs">
       <button class="subtab-button" @click="handleAddRecipe">
@@ -66,11 +61,6 @@
         />
       </div>
     </div>
-
-    <!-- Logout Button at Bottom (only when logged in) -->
-    <div v-if="isLoggedIn" class="logout-section">
-      <button @click="handleLogout" class="logout-button">Logout</button>
-    </div>
   </aside>
 </template>
 
@@ -94,8 +84,7 @@ const emit = defineEmits([
   "ingredient-filter-change",
   "profile-click",
   "home-click",
-  "sign-in",
-  "logout",
+  "sign-in"
 ]);
 
 const { isLoggedIn } = useAuth();
@@ -104,10 +93,6 @@ const { isLoggedIn } = useAuth();
 const recipeSearchQuery = ref("");
 const ingredientFilterInput = ref("");
 const selectedIngredients = ref([]);
-
-function handleSignIn() {
-  emit("sign-in");
-}
 
 function handleProfileClick() {
   emit("profile-click");
@@ -131,10 +116,6 @@ function handleAddCollection() {
     return;
   }
   emit("add-collection");
-}
-
-function handleLogout() {
-  emit("logout");
 }
 
 function handleRecipeSearch() {

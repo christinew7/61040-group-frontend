@@ -21,12 +21,34 @@
     </div>
 
     <div class="header-right">
-      <div v-if="isLoggedIn" class="user-info" @click="goToProfile">
-        <span class="user-name">{{ displayName }}</span>
-        <div class="avatar-circle">
-          {{ userInitials }}
-        </div>
-      </div>
+      <DropdownMenu v-if="isLoggedIn">
+        <template #trigger>
+          <div class="user-info">
+            <span class="user-name">{{ displayName }}</span>
+            <div class="avatar-circle">
+              {{ userInitials }}
+            </div>
+          </div>
+        </template>
+        <template #menu="{ close }">
+          <div class="menu-item" @click="goToProfile(close)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            My Profile
+          </div>
+          <div class="menu-divider"></div>
+          <div class="menu-item logout" @click="handleLogout(close)">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+              <polyline points="16 17 21 12 16 7"></polyline>
+              <line x1="21" y1="12" x2="9" y2="12"></line>
+            </svg>
+            Logout
+          </div>
+        </template>
+      </DropdownMenu>
       <button v-else @click="$emit('sign-in')" class="btn-signin">
         Sign In
       </button>
@@ -39,10 +61,11 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useHeader } from '../composables/useHeader.js';
 import { useAuth } from '../composables/useAuth.js';
+import DropdownMenu from './DropdownMenu.vue';
 
 const router = useRouter();
 const { title, breadcrumbs } = useHeader();
-const { isLoggedIn, user } = useAuth();
+const { isLoggedIn, user, logout } = useAuth();
 
 const displayName = computed(() => {
   return user.value?.displayName || user.value?.email?.split('@')[0] || 'User';
@@ -53,8 +76,15 @@ const userInitials = computed(() => {
   return name.slice(0, 2).toUpperCase();
 });
 
-function goToProfile() {
+function goToProfile(close) {
+  close();
   router.push('/profile');
+}
+
+async function handleLogout(close) {
+  close();
+  await logout();
+  router.push('/');
 }
 
 defineEmits(['sign-in']);
@@ -69,6 +99,8 @@ defineEmits(['sign-in']);
   background: white;
   border-bottom: 2px solid var(--color-primary);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  z-index: 20;
+  position: relative;
 }
 
 .header-left {
@@ -126,6 +158,7 @@ defineEmits(['sign-in']);
   padding: 0.25rem;
   border-radius: 8px;
   transition: background 0.2s;
+  padding: 6px 12px;
 }
 
 .user-info:hover {
@@ -164,5 +197,41 @@ defineEmits(['sign-in']);
 .btn-signin:hover {
   background: var(--color-primary);
   color: white;
+}
+
+.menu-item {
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--color-text-dark);
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  margin: 0 8px;
+  border-radius: 4px;
+}
+
+.menu-item:hover {
+  background: #f3f4f6;
+}
+
+.menu-item.logout {
+  color: #dc2626;
+}
+
+.menu-item.logout:hover {
+  background: #fee2e2;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 0.5rem 0;
+}
+
+.icon {
+  color: inherit;
+  display: block;
 }
 </style>
