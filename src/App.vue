@@ -54,8 +54,18 @@ import Header from "./components/Header.vue";
 import LoginPopup from "./components/LoginPopup.vue";
 import AddRecipePopup from "./components/AddRecipePopup.vue";
 import AddCollectionPopup from "./components/AddCollectionPopup.vue";
-import { getMyCollections, createCollection, addMemberToCollection, addItemToCollection } from "./api/Collecting.js";
-import { createRecipe, parseIngredients, setImage, getAllMyRecipes } from "./api/Recipe.js";
+import {
+  getMyCollections,
+  createCollection,
+  addMemberToCollection,
+  addItemToCollection,
+} from "./api/Collecting.js";
+import {
+  createRecipe,
+  parseIngredients,
+  setImage,
+  getAllMyRecipes,
+} from "./api/Recipe.js";
 import "./utils/app.css";
 
 const router = useRouter();
@@ -71,11 +81,11 @@ const userCollections = ref([]);
 const userRecipes = ref([]);
 
 // Show search only on Home page
-const shouldShowSearch = computed(() => route.name === 'Home');
+const shouldShowSearch = computed(() => route.name === "Home");
 
 // Hide header on pages that have their own navbar
 const shouldShowHeader = computed(() => {
-  return !['Collection', 'Recipe', 'Profile'].includes(route.name);
+  return !["Collection", "Recipe", "Profile"].includes(route.name);
 });
 
 onMounted(async () => {
@@ -162,7 +172,7 @@ function handleIngredientFilter(filters) {
 async function handleRecipeSubmit(recipeData) {
   try {
     const authToken = getToken();
-    
+
     const recipeId = await createRecipe(
       authToken,
       recipeData.name,
@@ -198,7 +208,7 @@ async function handleRecipeSubmit(recipeData) {
     }
 
     alert(`Recipe "${recipeData.name}" created successfully!`);
-    
+
     // If on a collection or home page, we might want to refresh the view
     // For now, just navigating to the new recipe or staying put is fine
   } catch (error) {
@@ -210,25 +220,49 @@ async function handleRecipeSubmit(recipeData) {
 async function handleCollectionSubmit(collectionData) {
   try {
     const authToken = getToken();
-    const newCollection = await createCollection(authToken, collectionData.name);
+    const newCollection = await createCollection(
+      authToken,
+      collectionData.name
+    );
+
+    // Backend returns either a string ID or an object with _id/id
+    let collectionId;
+    if (typeof newCollection === "string") {
+      // Backend returned the ID directly as a string
+      collectionId = newCollection;
+    } else {
+      // Backend returned an object, try both _id and id fields
+      collectionId = newCollection._id || newCollection.id;
+    }
+
+    if (!collectionId) {
+      throw new Error("Collection was created but no ID was returned");
+    }
+
+    console.log("Using collection ID:", collectionId);
 
     if (collectionData.sharedUsers?.length > 0) {
       for (const email of collectionData.sharedUsers) {
         try {
-          await addMemberToCollection(authToken, newCollection._id, email);
-        } catch (e) { console.error(e); }
+          await addMemberToCollection(authToken, collectionId, email);
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
 
     if (collectionData.recipes?.length > 0) {
       for (const recipeId of collectionData.recipes) {
         try {
-          await addItemToCollection(authToken, newCollection._id, recipeId);
-        } catch (e) { console.error(e); }
+          await addItemToCollection(authToken, collectionId, recipeId);
+        } catch (e) {
+          console.error(e);
+        }
       }
     }
 
     await fetchCollections();
+    await fetchRecipes();
     alert(`Collection "${collectionData.name}" created successfully!`);
   } catch (error) {
     console.error("Failed to create collection:", error);
@@ -246,7 +280,7 @@ async function handleCollectionSubmit(collectionData) {
 .main-content {
   flex: 1;
   /* Ensure proper sizing */
-  width: 0; 
+  width: 0;
   background: #f9fafb;
 }
 </style>
