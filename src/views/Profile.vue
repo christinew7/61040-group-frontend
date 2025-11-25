@@ -128,6 +128,7 @@
     <!-- Add Collection Popup -->
     <AddCollectionPopup
       :isOpen="isAddCollectionPopupOpen"
+      :recipes="userRecipes"
       @close="closeAddCollectionPopup"
       @submit="handleCollectionSubmit"
     />
@@ -446,7 +447,7 @@ async function handleCollectionSubmit(collectionData) {
     );
     console.log("Collection created:", newCollection);
     console.log("Collection type:", typeof newCollection);
-    
+
     // Backend returns either a string ID or an object with _id/id
     let collectionId;
     if (typeof newCollection === "string") {
@@ -456,7 +457,7 @@ async function handleCollectionSubmit(collectionData) {
       // Backend returned an object, try both _id and id fields
       collectionId = newCollection._id || newCollection.id;
     }
-    
+
     if (!collectionId) {
       throw new Error("Collection was created but no ID was returned");
     }
@@ -465,7 +466,11 @@ async function handleCollectionSubmit(collectionData) {
 
     // Add shared users to the collection
     if (collectionData.sharedUsers && collectionData.sharedUsers.length > 0) {
-      console.log("Attempting to add", collectionData.sharedUsers.length, "members to collection");
+      console.log(
+        "Attempting to add",
+        collectionData.sharedUsers.length,
+        "members to collection"
+      );
       for (const email of collectionData.sharedUsers) {
         try {
           console.log("Adding member:", {
@@ -484,7 +489,10 @@ async function handleCollectionSubmit(collectionData) {
         }
       }
     } else {
-      console.log("No shared users to add. sharedUsers:", collectionData.sharedUsers);
+      console.log(
+        "No shared users to add. sharedUsers:",
+        collectionData.sharedUsers
+      );
     }
 
     // Add recipes to the collection

@@ -98,6 +98,7 @@
     <!-- Add Collection Popup -->
     <AddCollectionPopup
       :isOpen="isAddCollectionPopupOpen"
+      :recipes="recipes"
       @close="closeAddCollectionPopup"
       @submit="handleCollectionSubmit"
     />

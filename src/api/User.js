@@ -135,7 +135,7 @@ export async function getProfileByUserId(token, userId) {
     if (result.error) {
       throw new Error(result.error);
     }
-    
+
     if (result.profile) {
       return result.profile;
     }

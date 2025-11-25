@@ -51,26 +51,33 @@
           <!-- Step 3: Add Recipes -->
           <div class="form-section">
             <h3>3. Add Recipes</h3>
-            <input
-              v-model="recipeInput"
-              type="text"
-              placeholder="Enter recipe name or ID..."
+            <select
+              v-model="selectedRecipeId"
               class="form-input"
-              @keydown.enter="addRecipe"
-            />
+              @change="addRecipe"
+            >
+              <option value="">Select a recipe to add...</option>
+              <option
+                v-for="recipe in availableRecipes"
+                :key="recipe._id"
+                :value="recipe._id"
+              >
+                {{ recipe.title }}
+              </option>
+            </select>
             <div class="recipes-list">
               <div
-                v-for="(recipe, index) in formData.recipes"
-                :key="index"
+                v-for="recipeId in formData.recipes"
+                :key="recipeId"
                 class="recipe-item"
               >
-                <span>{{ recipe }}</span>
-                <button @click="removeRecipe(index)" class="remove-button">
+                <span>{{ getRecipeTitle(recipeId) }}</span>
+                <button @click="removeRecipe(recipeId)" class="remove-button">
                   ×
                 </button>
               </div>
             </div>
-            <p class="form-hint">Press Enter to add a recipe</p>
+            <p class="form-hint">Select recipes from the dropdown</p>
           </div>
         </div>
       </div>
@@ -86,13 +93,17 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import "./AddCollectionPopup.css";
 
 const props = defineProps({
   isOpen: {
     type: Boolean,
     default: false,
+  },
+  recipes: {
+    type: Array,
+    default: () => [],
   },
 });
 
@@ -105,7 +116,19 @@ const formData = ref({
 });
 
 const sharedUserInput = ref("");
-const recipeInput = ref("");
+const selectedRecipeId = ref("");
+
+// Filter out recipes that are already added
+const availableRecipes = computed(() => {
+  return props.recipes.filter(
+    (recipe) => !formData.value.recipes.includes(recipe._id)
+  );
+});
+
+function getRecipeTitle(recipeId) {
+  const recipe = props.recipes.find((r) => r._id === recipeId);
+  return recipe ? recipe.title : recipeId;
+}
 
 function addSharedUser() {
   const user = sharedUserInput.value.trim();
@@ -122,15 +145,14 @@ function removeSharedUser(user) {
 }
 
 function addRecipe() {
-  const recipe = recipeInput.value.trim();
-  if (recipe) {
-    formData.value.recipes.push(recipe);
-    recipeInput.value = "";
+  if (selectedRecipeId.value && !formData.value.recipes.includes(selectedRecipeId.value)) {
+    formData.value.recipes.push(selectedRecipeId.value);
+    selectedRecipeId.value = "";
   }
 }
 
-function removeRecipe(index) {
-  formData.value.recipes.splice(index, 1);
+function removeRecipe(recipeId) {
+  formData.value.recipes = formData.value.recipes.filter(id => id !== recipeId);
 }
 
 function handleClose() {
