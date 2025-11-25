@@ -445,25 +445,53 @@ async function handleCollectionSubmit(collectionData) {
       collectionData.name
     );
     console.log("Collection created:", newCollection);
+    console.log("Collection type:", typeof newCollection);
+    
+    // Backend returns either a string ID or an object with _id/id
+    let collectionId;
+    if (typeof newCollection === "string") {
+      // Backend returned the ID directly as a string
+      collectionId = newCollection;
+    } else {
+      // Backend returned an object, try both _id and id fields
+      collectionId = newCollection._id || newCollection.id;
+    }
+    
+    if (!collectionId) {
+      throw new Error("Collection was created but no ID was returned");
+    }
+
+    console.log("Using collection ID:", collectionId);
 
     // Add shared users to the collection
     if (collectionData.sharedUsers && collectionData.sharedUsers.length > 0) {
+      console.log("Attempting to add", collectionData.sharedUsers.length, "members to collection");
       for (const email of collectionData.sharedUsers) {
         try {
-          await addMemberToCollection(authToken, newCollection._id, email);
-          console.log(`Added member: ${email}`);
+          console.log("Adding member:", {
+            authToken: typeof authToken,
+            collectionId: typeof collectionId,
+            collectionIdValue: collectionId,
+            email: typeof email,
+            emailValue: email,
+          });
+          await addMemberToCollection(authToken, collectionId, email);
+          console.log(`Successfully added member: ${email}`);
         } catch (error) {
           console.error(`Failed to add member ${email}:`, error);
+          console.error("Error details:", error.message, error.response?.data);
           // Continue adding other members even if one fails
         }
       }
+    } else {
+      console.log("No shared users to add. sharedUsers:", collectionData.sharedUsers);
     }
 
     // Add recipes to the collection
     if (collectionData.recipes && collectionData.recipes.length > 0) {
       for (const recipeId of collectionData.recipes) {
         try {
-          await addItemToCollection(authToken, newCollection._id, recipeId);
+          await addItemToCollection(authToken, collectionId, recipeId);
           console.log(`Added recipe: ${recipeId}`);
         } catch (error) {
           console.error(`Failed to add recipe ${recipeId}:`, error);

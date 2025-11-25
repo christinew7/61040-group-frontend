@@ -25,12 +25,20 @@ const profileApi = axios.create({
  * @returns {Promise<{token: string}>}
  */
 export async function register(email, password, displayName) {
-  if (typeof email !== "string" || typeof password !== "string" || typeof displayName !== "string") {
+  if (
+    typeof email !== "string" ||
+    typeof password !== "string" ||
+    typeof displayName !== "string"
+  ) {
     throw new TypeError("Email, password, and display name must be strings.");
   }
 
   try {
-    const response = await userApi.post("/register", { email, password, displayName });
+    const response = await userApi.post("/register", {
+      email,
+      password,
+      displayName,
+    });
     return response.data; // { token }
   } catch (err) {
     throw new Error(err.response?.data?.error || "Failed to register.");
@@ -104,6 +112,45 @@ export async function getProfile(token) {
 }
 
 /**
+ * @route POST api/Profile/getProfile
+ * @desc Get user profile by userId.
+ * @returns {Promise<{userId: string, displayName: string}>}
+ */
+export async function getProfileByUserId(token, userId) {
+  if (typeof token !== "string") {
+    throw new TypeError("Token is required.");
+  }
+  if (typeof userId !== "string") {
+    throw new TypeError("User ID is required.");
+  }
+
+  try {
+    const response = await profileApi.post("/getProfile", { token, userId });
+
+    console.log("getProfileByUserId response for", userId, ":", response.data);
+
+    // Backend returns { profile: {...} } or { error: "..." }
+    const result = response.data;
+
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    
+    if (result.profile) {
+      return result.profile;
+    }
+
+    console.error("Unexpected response format:", result);
+    throw new Error("Invalid response format from server");
+  } catch (err) {
+    if (err.message && !err.response) {
+      throw err;
+    }
+    throw new Error(err.response?.data?.error || "Failed to fetch user info.");
+  }
+}
+
+/**
  * @route POST api/Profile/updateDisplayName
  * @desc Change the user's display name.
  * @returns {Promise<boolean>}
@@ -120,7 +167,9 @@ export async function updateDisplayName(token, displayName) {
     await profileApi.post("/updateDisplayName", { token, displayName });
     return true;
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to update display name.");
+    throw new Error(
+      err.response?.data?.error || "Failed to update display name."
+    );
   }
 }
 
