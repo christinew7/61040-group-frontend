@@ -105,13 +105,13 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
-import { getRecipe, createRecipe, parseIngredients } from "../api/Recipe.js";
+import { getRecipe, createRecipe, parseIngredients, setImage } from "../api/Recipe.js";
 import { getMyCollections, addItemToCollection } from "../api/Collecting.js";
 import { useAuth } from "../composables/useAuth.js";
 
 const router = useRouter();
 const route = useRoute();
-const { token } = useAuth();
+const { token, isLoggedIn } = useAuth();
 
 // Recipe data
 const recipe = ref({
@@ -134,10 +134,6 @@ const userCollections = ref([]);
 
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
-// Helper function to get auth token
-function getToken() {
-  return token.value || "demo-token";
-}
 
 // Fetch recipe details on mount
 onMounted(async () => {
@@ -146,9 +142,10 @@ onMounted(async () => {
 });
 
 async function fetchCollections() {
+  if (!token.value) return; // Skip if not logged in
+  
   try {
-    const authToken = getToken();
-    const response = await getMyCollections(authToken);
+    const response = await getMyCollections(token.value);
     userCollections.value = response;
   } catch (error) {
     console.error("Failed to fetch collections:", error);
@@ -160,32 +157,33 @@ async function fetchRecipeDetails() {
   error.value = null;
 
   try {
-    const recipeId = route.params.id;
+    const owner = route.query.owner;
+    const title = route.query.title;
 
-    console.log("Fetching recipe with ID:", recipeId);
-
-    // First, try to get recipe from query params (most reliable since it's passed from the collection)
-    if (route.query.recipe) {
-      try {
-        recipe.value = JSON.parse(decodeURIComponent(route.query.recipe));
-        console.log("Recipe loaded from query params:", recipe.value);
-        console.log("Recipe image field:", recipe.value.image);
-        isLoading.value = false;
-        return;
-      } catch (parseErr) {
-        console.error("Failed to parse recipe from query params:", parseErr);
-        // Continue to API fallback
-      }
+    if (!owner || !title) {
+      throw new Error("Recipe information missing. Please navigate from your profile or collections.");
     }
 
-    // Fallback: Try to get recipe from API (requires owner and title, not just ID)
-    // Since the backend doesn't support fetching by ID alone, this will likely fail
-    // unless we update the backend or have owner/title info
-    const authToken = getToken();
-    console.log("Attempting API fetch (may not work without owner/title)");
+    console.log("Fetching recipe:", { owner, title });
 
-    const data = await getRecipe(authToken, recipeId);
-    recipe.value = data;
+    // Use public getRecipe (no auth needed)
+    const data = await getRecipe(owner, title);
+    console.log("Raw API response:", data)
+    
+    // Extract recipe from response
+    let recipes = data;
+    if (Array.isArray(recipes) && recipes.length > 0) {
+      recipes = recipes[0];
+    }
+    if (recipes.recipes) {
+      recipes = recipes.recipes;
+    }
+
+    recipe.value = Array.isArray(recipes) ? recipes[0] : recipes;
+
+    console.log("Recipe loaded:", recipe.value);
+    console.log("Recipe image:", recipe.value?.image);
+    console.log("Recipe ingredients:", recipe.value?.ingredients);
   } catch (err) {
     console.error("Failed to fetch recipe details:", err);
     error.value = err.message;
@@ -204,24 +202,36 @@ function closeAddRecipePopup() {
 }
 
 async function handleRecipeSubmit(recipeData) {
-  try {
-    const authToken = getToken();
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
 
-    // Create the recipe - returns the recipe ID
+  try {
+    // Create recipe WITHOUT image
     const recipeId = await createRecipe(
-      authToken,
+      token.value,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
-      recipeData.image?.trim() || undefined
+      recipeData.description?.trim() || undefined
     );
     console.log("Recipe created with ID:", recipeId);
+
+    // Set image separately if provided
+    if (recipeData.image?.trim()) {
+      try {
+        await setImage(token.value, recipeId, recipeData.image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
 
     // Add ingredients if provided
     if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
       try {
         const ingredients = await parseIngredients(
-          authToken,
+          token.value,
           recipeId,
           recipeData.ingredientsText
         );
@@ -231,10 +241,10 @@ async function handleRecipeSubmit(recipeData) {
       }
     }
 
-    // Add the recipe to the selected collection if one was chosen
+    // Add to collection if selected
     if (recipeData.collection && recipeId) {
       try {
-        await addItemToCollection(authToken, recipeData.collection, recipeId);
+        await addItemToCollection(token.value, recipeData.collection, recipeId);
         console.log(`Added recipe to collection: ${recipeData.collection}`);
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);

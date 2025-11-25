@@ -159,11 +159,7 @@ import {
   addMemberToCollection,
   addItemToCollection,
 } from "../api/Collecting.js";
-import {
-  createRecipe,
-  parseIngredients,
-  getAllMyRecipes,
-} from "../api/Recipe.js";
+import { createRecipe, parseIngredients, getAllMyRecipes, setImage } from "../api/Recipe.js";
 import { getProfile, updateDisplayName, deleteAccount } from "../api/User.js";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
 
@@ -217,7 +213,7 @@ onMounted(async () => {
 
 // Helper function to get auth token
 function getToken() {
-  return token.value || "demo-token";
+  return token.value;
 }
 
 async function fetchCollections() {
@@ -241,9 +237,9 @@ async function fetchRecipes() {
   recipesError.value = null;
 
   try {
-    const authToken = getToken();
+    const authToken = token.value;
     const recipes = await getAllMyRecipes(authToken);
-    userRecipes.value = recipes || [];
+    userRecipes.value = (recipes || []).reverse(); // newest recipe first
   } catch (err) {
     console.error("Failed to fetch recipes:", err);
     recipesError.value = err.message;
@@ -356,13 +352,6 @@ async function handleRecipeSubmit(recipeData) {
   try {
     const authToken = getToken();
 
-    console.log("Creating recipe with data:", {
-      name: recipeData.name,
-      link: recipeData.link,
-      description: recipeData.description,
-      image: recipeData.image,
-    });
-
     // Create the recipe - returns the recipe ID
     // Convert empty strings to undefined for optional fields
     const recipeId = await createRecipe(
@@ -370,13 +359,23 @@ async function handleRecipeSubmit(recipeData) {
       recipeData.name,
       recipeData.link?.trim() || undefined,
       recipeData.description?.trim() || undefined,
-      recipeData.image?.trim() || undefined
     );
     console.log("Recipe created with ID:", recipeId);
 
     // Check if recipe was created successfully
     if (!recipeId) {
       throw new Error("Recipe creation failed - no ID returned");
+    }
+
+        // Set image if provided
+    if (recipeData.image?.trim()) {
+      try {
+        await setImage(token.value, recipeId, recipeData.image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+        // Continue even if image fails
+      }
     }
 
     // Add ingredients if provided
@@ -407,6 +406,9 @@ async function handleRecipeSubmit(recipeData) {
         // Continue even if adding to collection fails
       }
     }
+
+    // Refresh recipes list
+    await fetchRecipes();
 
     alert(`Recipe "${recipeData.name}" created successfully!`);
   } catch (error) {

@@ -75,10 +75,10 @@ import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import { getMyCollections } from "../api/Collecting.js";
-import { createRecipe, parseIngredients } from "../api/Recipe.js";
+import { createRecipe, parseIngredients, setImage } from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
 
-const { logout, init } = useAuth();
+const { token, isLoggedIn, logout, init } = useAuth(); 
 const showLogin = ref(false);
 
 onMounted(async () => {
@@ -146,17 +146,11 @@ const isAddCollectionPopupOpen = ref(false);
 // Collections data
 const userCollections = ref([]);
 
-// Helper function to get auth token
-function getToken() {
-  return token.value || "demo-token";
-}
-
 async function fetchCollections() {
   if (!isLoggedIn.value) return;
 
   try {
-    const authToken = getToken();
-    const response = await getMyCollections(authToken);
+    const response = await getMyCollections(token.value);
     userCollections.value = response;
   } catch (error) {
     console.error("Failed to fetch collections:", error);
@@ -173,24 +167,36 @@ function closeAddRecipePopup() {
 }
 
 async function handleRecipeSubmit(recipeData) {
-  try {
-    const authToken = getToken();
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
 
-    // Create the recipe - returns the recipe ID
+  try {
+    // Create recipe 
     const recipeId = await createRecipe(
-      authToken,
+      token.value,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
-      recipeData.image?.trim() || undefined
+      recipeData.description?.trim() || undefined
     );
     console.log("Recipe created with ID:", recipeId);
+
+    // Set image separately if provided
+    if (recipeData.image?.trim()) {
+      try {
+        await setImage(token.value, recipeId, recipeData.image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
 
     // Add ingredients if provided
     if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
       try {
         const ingredients = await parseIngredients(
-          authToken,
+          token.value,
           recipeId,
           recipeData.ingredientsText
         );
@@ -200,10 +206,10 @@ async function handleRecipeSubmit(recipeData) {
       }
     }
 
-    // Add the recipe to the selected collection if one was chosen
+    // Add to collection if selected
     if (recipeData.collection && recipeId) {
       try {
-        await addItemToCollection(authToken, recipeData.collection, recipeId);
+        await addItemToCollection(token.value, recipeData.collection, recipeId);
         console.log(`Added recipe to collection: ${recipeData.collection}`);
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
@@ -252,11 +258,13 @@ function handleHomeClick() {
 
 function onRecipeClick(recipe) {
   console.log("Recipe clicked:", recipe);
-  // Navigate to recipe detail page
   router.push({
     name: "Recipe",
     params: { id: recipe._id },
-    query: { recipe: encodeURIComponent(JSON.stringify(recipe)) },
+    query: { 
+      owner: recipe.owner,
+      title: recipe.title 
+    },
   });
 }
 
