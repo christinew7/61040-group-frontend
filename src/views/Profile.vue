@@ -1,135 +1,109 @@
 <template>
-  <div class="profile-layout">
-    <Sidebar
-      :showSearch="false"
-      @add-recipe="handleAddRecipe"
-      @add-collection="handleAddCollection"
-      @profile-click="handleProfileClick"
-      @home-click="handleHomeClick"
-    />
+  <div class="profile-content">
+    <!-- Top Navbar -->
+    <div class="profile-navbar">
+      <h1>my profile</h1>
+    </div>
+    <!-- My Account Section -->
+    <section class="account-section">
+      <h2>My Account</h2>
 
-    <!-- Main Content -->
-    <div class="profile-content">
-      <!-- Top Navbar -->
-      <div class="profile-navbar">
-        <h1>my profile</h1>
-      </div>
-      <!-- My Account Section -->
-      <section class="account-section">
-        <h2>My Account</h2>
-
-        <div class="account-item">
-          <label for="display-name">Displayed Name</label>
-          <div class="display-name-group">
-            <input
-              id="display-name"
-              v-model="displayName"
-              type="text"
-              class="name-input"
-              :disabled="!isEditingName"
-            />
-            <button
-              v-if="!isEditingName"
-              @click="enableNameEdit"
-              class="btn-edit"
-            >
-              Edit
-            </button>
-            <button
-              v-else
-              @click="saveDisplayName"
-              class="btn-save"
-              :disabled="isSaving"
-            >
-              {{ isSaving ? "Saving..." : "Save" }}
-            </button>
-          </div>
-          <!-- Edit name messages -->
-          <p v-if="saveSuccess" class="success-name-edit">
-            ✓ Display name updated!
-          </p>
-          <p v-if="saveError" class="error-name-edit">✗ {{ saveError }}</p>
-        </div>
-
-        <div class="account-actions">
-          <button @click="handleLogout" class="btn-logout">Logout</button>
-          <button @click="handleDeleteAccount" class="btn-delete">
-            Delete Account
+      <div class="account-item">
+        <label for="display-name">Displayed Name</label>
+        <div class="display-name-group">
+          <input
+            id="display-name"
+            v-model="displayName"
+            type="text"
+            class="name-input"
+            :disabled="!isEditingName"
+          />
+          <button
+            v-if="!isEditingName"
+            @click="enableNameEdit"
+            class="btn-edit"
+          >
+            Edit
+          </button>
+          <button
+            v-else
+            @click="saveDisplayName"
+            class="btn-save"
+            :disabled="isSaving"
+          >
+            {{ isSaving ? "Saving..." : "Save" }}
           </button>
         </div>
-      </section>
+        <!-- Edit name messages -->
+        <p v-if="saveSuccess" class="success-name-edit">
+          ✓ Display name updated!
+        </p>
+        <p v-if="saveError" class="error-name-edit">✗ {{ saveError }}</p>
+      </div>
 
-      <!-- Collections Section -->
-      <section class="collections-section">
-        <h2>My Collections</h2>
+      <div class="account-actions">
+        <button @click="handleLogout" class="btn-logout">Logout</button>
+        <button @click="handleDeleteAccount" class="btn-delete">
+          Delete Account
+        </button>
+      </div>
+    </section>
 
-        <div v-if="isLoadingCollections" class="loading-state">
-          Loading collections...
+    <!-- Collections Section -->
+    <section class="collections-section">
+      <h2>My Collections</h2>
+
+      <div v-if="isLoadingCollections" class="loading-state">
+        Loading collections...
+      </div>
+
+      <div v-else-if="collectionsError" class="error-state">
+        <p>Error loading collections: {{ collectionsError }}</p>
+        <button @click="fetchCollections" class="btn-retry">Retry</button>
+      </div>
+
+      <div v-else>
+        <div v-if="userCollections.length > 0" class="collections-grid">
+          <CollectionDisplay
+            v-for="collection in userCollections"
+            :key="collection._id"
+            :collection="collection"
+            @click="onCollectionClick"
+          />
         </div>
+        <p v-else class="empty-state">
+          You don't have any collections yet. Create one from the sidebar!
+        </p>
+      </div>
+    </section>
 
-        <div v-else-if="collectionsError" class="error-state">
-          <p>Error loading collections: {{ collectionsError }}</p>
-          <button @click="fetchCollections" class="btn-retry">Retry</button>
+    <!-- My Recipes Section -->
+    <section class="recipes-section">
+      <h2>My Recipes</h2>
+
+      <div v-if="isLoadingRecipes" class="loading-state">
+        Loading recipes...
+      </div>
+
+      <div v-else-if="recipesError" class="error-state">
+        <p>Error loading recipes: {{ recipesError }}</p>
+        <button @click="fetchRecipes" class="btn-retry">Retry</button>
+      </div>
+
+      <div v-else>
+        <div v-if="userRecipes.length > 0" class="recipes-grid">
+          <RecipeDisplay
+            v-for="recipe in userRecipes"
+            :key="recipe._id"
+            :recipe="recipe"
+            @click="onRecipeClick"
+          />
         </div>
-
-        <div v-else>
-          <div v-if="userCollections.length > 0" class="collections-grid">
-            <CollectionDisplay
-              v-for="collection in userCollections"
-              :key="collection._id"
-              :collection="collection"
-              @click="onCollectionClick"
-            />
-          </div>
-          <p v-else class="empty-state">
-            You don't have any collections yet. Create one from the sidebar!
-          </p>
-        </div>
-      </section>
-
-      <!-- My Recipes Section -->
-      <section class="recipes-section">
-        <h2>My Recipes</h2>
-
-        <div v-if="isLoadingRecipes" class="loading-state">
-          Loading recipes...
-        </div>
-
-        <div v-else-if="recipesError" class="error-state">
-          <p>Error loading recipes: {{ recipesError }}</p>
-          <button @click="fetchRecipes" class="btn-retry">Retry</button>
-        </div>
-
-        <div v-else>
-          <div v-if="userRecipes.length > 0" class="recipes-grid">
-            <RecipeDisplay
-              v-for="recipe in userRecipes"
-              :key="recipe._id"
-              :recipe="recipe"
-              @click="onRecipeClick"
-            />
-          </div>
-          <p v-else class="empty-state">
-            You haven't created any recipes yet. Add one from the sidebar!
-          </p>
-        </div>
-      </section>
-    </div>
-
-    <!-- Add Recipe Popup -->
-    <AddRecipePopup
-      :isOpen="isAddRecipePopupOpen"
-      :collections="userCollections"
-      @close="closeAddRecipePopup"
-      @submit="handleRecipeSubmit"
-    />
-
-    <!-- Add Collection Popup -->
-    <AddCollectionPopup
-      :isOpen="isAddCollectionPopupOpen"
-      @close="closeAddCollectionPopup"
-      @submit="handleCollectionSubmit"
-    />
+        <p v-else class="empty-state">
+          You haven't created any recipes yet. Add one from the sidebar!
+        </p>
+      </div>
+    </section>
 
     <!-- Delete Account Confirmation Popup -->
     <ConfirmationPopup
@@ -148,18 +122,10 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
-import Sidebar from "../components/Sidebar.vue";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
-import AddRecipePopup from "../components/AddRecipePopup.vue";
-import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import ConfirmationPopup from "../components/ConfirmationPopup.vue";
-import {
-  getMyCollections,
-  createCollection,
-  addMemberToCollection,
-  addItemToCollection,
-} from "../api/Collecting.js";
-import { createRecipe, parseIngredients, getAllMyRecipes, setImage } from "../api/Recipe.js";
+import { getMyCollections } from "../api/Collecting.js";
+import { getAllMyRecipes } from "../api/Recipe.js";
 import { getProfile, updateDisplayName, deleteAccount } from "../api/User.js";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
 
@@ -172,8 +138,6 @@ const saveSuccess = ref(false);
 const saveError = ref(null);
 
 // Popup state
-const isAddRecipePopupOpen = ref(false);
-const isAddCollectionPopupOpen = ref(false);
 const isDeleteConfirmOpen = ref(false);
 
 // User account data
@@ -338,155 +302,14 @@ function onRecipeClick(recipe) {
     },
   });
 }
-
-function handleAddRecipe() {
-  console.log("Add recipe clicked");
-  isAddRecipePopupOpen.value = true;
-}
-
-function closeAddRecipePopup() {
-  isAddRecipePopupOpen.value = false;
-}
-
-async function handleRecipeSubmit(recipeData) {
-  try {
-    const authToken = getToken();
-
-    // Create the recipe - returns the recipe ID
-    // Convert empty strings to undefined for optional fields
-    const recipeId = await createRecipe(
-      authToken,
-      recipeData.name,
-      recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
-    );
-    console.log("Recipe created with ID:", recipeId);
-
-    // Check if recipe was created successfully
-    if (!recipeId) {
-      throw new Error("Recipe creation failed - no ID returned");
-    }
-
-        // Set image if provided
-    if (recipeData.image?.trim()) {
-      try {
-        await setImage(token.value, recipeId, recipeData.image);
-        console.log("Image set successfully");
-      } catch (error) {
-        console.error("Failed to set image:", error);
-        // Continue even if image fails
-      }
-    }
-
-    // Add ingredients if provided
-    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
-      try {
-        const ingredients = await parseIngredients(
-          authToken,
-          recipeId,
-          recipeData.ingredientsText
-        );
-        console.log("Ingredients added:", ingredients);
-      } catch (error) {
-        console.error("Failed to add ingredients:", error);
-        // Continue even if adding ingredients fails
-      }
-    }
-
-    // Add the recipe to the selected collection if one was chosen
-    if (recipeData.collection && recipeId) {
-      try {
-        await addItemToCollection(authToken, recipeData.collection, recipeId);
-        console.log(`Added recipe to collection: ${recipeData.collection}`);
-
-        // Refresh collections to show updated recipe count
-        await fetchCollections();
-      } catch (error) {
-        console.error("Failed to add recipe to collection:", error);
-        // Continue even if adding to collection fails
-      }
-    }
-
-    // Refresh recipes list
-    await fetchRecipes();
-
-    alert(`Recipe "${recipeData.name}" created successfully!`);
-  } catch (error) {
-    console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
-  }
-}
-
-function handleAddCollection() {
-  console.log("Add collection clicked");
-  isAddCollectionPopupOpen.value = true;
-}
-
-function closeAddCollectionPopup() {
-  isAddCollectionPopupOpen.value = false;
-}
-
-async function handleCollectionSubmit(collectionData) {
-  try {
-    const authToken = getToken();
-
-    // Create the collection
-    const newCollection = await createCollection(
-      authToken,
-      collectionData.name
-    );
-    console.log("Collection created:", newCollection);
-
-    // Add shared users to the collection
-    if (collectionData.sharedUsers && collectionData.sharedUsers.length > 0) {
-      for (const email of collectionData.sharedUsers) {
-        try {
-          await addMemberToCollection(authToken, newCollection._id, email);
-          console.log(`Added member: ${email}`);
-        } catch (error) {
-          console.error(`Failed to add member ${email}:`, error);
-          // Continue adding other members even if one fails
-        }
-      }
-    }
-
-    // Add recipes to the collection
-    if (collectionData.recipes && collectionData.recipes.length > 0) {
-      for (const recipeId of collectionData.recipes) {
-        try {
-          await addItemToCollection(authToken, newCollection._id, recipeId);
-          console.log(`Added recipe: ${recipeId}`);
-        } catch (error) {
-          console.error(`Failed to add recipe ${recipeId}:`, error);
-          // Continue adding other recipes even if one fails
-        }
-      }
-    }
-
-    // Refresh the collections list
-    await fetchCollections();
-
-    alert(`Collection "${collectionData.name}" created successfully!`);
-  } catch (error) {
-    console.error("Failed to create collection:", error);
-    alert(`Failed to create collection: ${error.message}`);
-  }
-}
-
-function handleProfileClick() {
-  // Already on profile page, so do nothing or scroll to top
-  console.log("Already on profile page");
-}
-
-function handleHomeClick() {
-  router.push("/");
-}
 </script>
 
 <style scoped>
-.profile-layout {
-  display: flex;
-  min-height: 100vh;
+.profile-content {
+  flex: 1;
+  background: #f9fafb;
+  /* Ensure it takes full height */
+  min-height: 100%;
 }
 
 .profile-content {

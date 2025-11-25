@@ -1,112 +1,82 @@
 <template>
-  <div class="recipe-layout">
-    <Sidebar
-      :showSearch="false"
-      @add-recipe="handleAddRecipe"
-      @add-collection="handleAddCollection"
-      @profile-click="handleProfileClick"
-      @home-click="handleHomeClick"
-    />
+  <div class="recipe-content">
+    <!-- Top Navbar -->
+    <Navbar title="recipe" />
 
-    <!-- Main Content -->
-    <div class="recipe-content">
-      <!-- Top Navbar -->
-      <Navbar title="recipe" />
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-state">Loading recipe...</div>
 
-      <!-- Loading State -->
-      <div v-if="isLoading" class="loading-state">Loading recipe...</div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="error-state">
-        <p>Error loading recipe: {{ error }}</p>
-        <button @click="fetchRecipeDetails" class="btn-retry">Retry</button>
-      </div>
-
-      <!-- Recipe Details -->
-      <div v-else class="recipe-details">
-        <!-- Recipe Header with Image -->
-        <div class="recipe-header">
-          <div class="recipe-image-container">
-            <img
-              :src="recipe.image || defaultImage"
-              :alt="recipe.title"
-              class="recipe-image"
-            />
-          </div>
-          <div class="recipe-title-section">
-            <h1 class="recipe-title">{{ recipe.title }}</h1>
-            <div v-if="recipe.link" class="recipe-link-container">
-              <a
-                :href="recipe.link"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="recipe-link"
-              >
-                🔗 View Original Recipe
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recipe Description -->
-        <section v-if="recipe.description" class="recipe-section">
-          <h2>Description</h2>
-          <p class="recipe-description">{{ recipe.description }}</p>
-        </section>
-
-        <!-- Ingredients List -->
-        <section class="recipe-section">
-          <h2>Ingredients</h2>
-          <div v-if="recipe.ingredients && recipe.ingredients.length > 0">
-            <ul class="ingredients-list">
-              <li
-                v-for="(ingredient, index) in recipe.ingredients"
-                :key="index"
-                class="ingredient-item"
-              >
-                <span v-if="ingredient.quantity" class="ingredient-quantity">
-                  {{ ingredient.quantity }}
-                </span>
-                <span v-if="ingredient.unit" class="ingredient-unit">
-                  {{ ingredient.unit }}
-                </span>
-                <span class="ingredient-name">
-                  {{ ingredient.name }}
-                </span>
-              </li>
-            </ul>
-          </div>
-          <p v-else class="empty-state">No ingredients listed yet.</p>
-        </section>
-      </div>
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <p>Error loading recipe: {{ error }}</p>
+      <button @click="fetchRecipeDetails" class="btn-retry">Retry</button>
     </div>
 
-    <!-- Add Recipe Popup -->
-    <AddRecipePopup
-      :isOpen="isAddRecipePopupOpen"
-      :collections="userCollections"
-      @close="closeAddRecipePopup"
-      @submit="handleRecipeSubmit"
-    />
+    <!-- Recipe Details -->
+    <div v-else class="recipe-details">
+      <!-- Recipe Header with Image -->
+      <div class="recipe-header">
+        <div class="recipe-image-container">
+          <img
+            :src="recipe.image || defaultImage"
+            :alt="recipe.title"
+            class="recipe-image"
+          />
+        </div>
+        <div class="recipe-title-section">
+          <h1 class="recipe-title">{{ recipe.title }}</h1>
+          <div v-if="recipe.link" class="recipe-link-container">
+            <a
+              :href="recipe.link"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="recipe-link"
+            >
+              🔗 View Original Recipe
+            </a>
+          </div>
+        </div>
+      </div>
 
-    <!-- Add Collection Popup -->
-    <AddCollectionPopup
-      :isOpen="isAddCollectionPopupOpen"
-      @close="closeAddCollectionPopup"
-      @submit="handleCollectionSubmit"
-    />
+      <!-- Recipe Description -->
+      <section v-if="recipe.description" class="recipe-section">
+        <h2>Description</h2>
+        <p class="recipe-description">{{ recipe.description }}</p>
+      </section>
+
+      <!-- Ingredients List -->
+      <section class="recipe-section">
+        <h2>Ingredients</h2>
+        <div v-if="recipe.ingredients && recipe.ingredients.length > 0">
+          <ul class="ingredients-list">
+            <li
+              v-for="(ingredient, index) in recipe.ingredients"
+              :key="index"
+              class="ingredient-item"
+            >
+              <span v-if="ingredient.quantity" class="ingredient-quantity">
+                {{ ingredient.quantity }}
+              </span>
+              <span v-if="ingredient.unit" class="ingredient-unit">
+                {{ ingredient.unit }}
+              </span>
+              <span class="ingredient-name">
+                {{ ingredient.name }}
+              </span>
+            </li>
+          </ul>
+        </div>
+        <p v-else class="empty-state">No ingredients listed yet.</p>
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
-import AddRecipePopup from "../components/AddRecipePopup.vue";
-import AddCollectionPopup from "../components/AddCollectionPopup.vue";
-import { getRecipe, createRecipe, parseIngredients, setImage } from "../api/Recipe.js";
-import { getMyCollections, addItemToCollection } from "../api/Collecting.js";
+import { getRecipe } from "../api/Recipe.js";
 import { useAuth } from "../composables/useAuth.js";
 
 const router = useRouter();
@@ -125,32 +95,13 @@ const recipe = ref({
 const isLoading = ref(false);
 const error = ref(null);
 
-// Popup state
-const isAddRecipePopupOpen = ref(false);
-const isAddCollectionPopupOpen = ref(false);
-
-// Collections data for recipe popup
-const userCollections = ref([]);
-
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
 
 // Fetch recipe details on mount
 onMounted(async () => {
   await fetchRecipeDetails();
-  await fetchCollections();
 });
-
-async function fetchCollections() {
-  if (!token.value) return; // Skip if not logged in
-  
-  try {
-    const response = await getMyCollections(token.value);
-    userCollections.value = response;
-  } catch (error) {
-    console.error("Failed to fetch collections:", error);
-  }
-}
 
 async function fetchRecipeDetails() {
   isLoading.value = true;
@@ -191,103 +142,9 @@ async function fetchRecipeDetails() {
     isLoading.value = false;
   }
 }
-
-function handleAddRecipe() {
-  console.log("Add recipe clicked");
-  isAddRecipePopupOpen.value = true;
-}
-
-function closeAddRecipePopup() {
-  isAddRecipePopupOpen.value = false;
-}
-
-async function handleRecipeSubmit(recipeData) {
-  if (!token.value) {
-    alert("Please sign in to create a recipe");
-    return;
-  }
-
-  try {
-    // Create recipe WITHOUT image
-    const recipeId = await createRecipe(
-      token.value,
-      recipeData.name,
-      recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined
-    );
-    console.log("Recipe created with ID:", recipeId);
-
-    // Set image separately if provided
-    if (recipeData.image?.trim()) {
-      try {
-        await setImage(token.value, recipeId, recipeData.image);
-        console.log("Image set successfully");
-      } catch (error) {
-        console.error("Failed to set image:", error);
-      }
-    }
-
-    // Add ingredients if provided
-    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
-      try {
-        const ingredients = await parseIngredients(
-          token.value,
-          recipeId,
-          recipeData.ingredientsText
-        );
-        console.log("Ingredients added:", ingredients);
-      } catch (error) {
-        console.error("Failed to add ingredients:", error);
-      }
-    }
-
-    // Add to collection if selected
-    if (recipeData.collection && recipeId) {
-      try {
-        await addItemToCollection(token.value, recipeData.collection, recipeId);
-        console.log(`Added recipe to collection: ${recipeData.collection}`);
-      } catch (error) {
-        console.error("Failed to add recipe to collection:", error);
-      }
-    }
-
-    alert(`Recipe "${recipeData.name}" created successfully!`);
-  } catch (error) {
-    console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
-  }
-}
-
-function handleAddCollection() {
-  console.log("Add collection clicked");
-  isAddCollectionPopupOpen.value = true;
-}
-
-function closeAddCollectionPopup() {
-  isAddCollectionPopupOpen.value = false;
-}
-
-function handleCollectionSubmit(collectionData) {
-  console.log("Collection submitted:", collectionData);
-  alert(`Collection "${collectionData.name}" created successfully!`);
-}
-
-function handleProfileClick() {
-  router.push("/profile");
-}
-
-function handleHomeClick() {
-  router.push("/");
-}
 </script>
 
 <style scoped>
-.recipe-layout {
-  display: flex;
-  min-height: 100vh;
-  align-items: stretch;
-}
-
 .recipe-content {
   flex: 1;
   background: #f9fafb;

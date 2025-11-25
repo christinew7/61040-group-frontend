@@ -1,70 +1,41 @@
 <template>
-  <div class="collection-layout">
-    <Sidebar
-      :showSearch="false"
-      @add-recipe="handleAddRecipe"
-      @add-collection="handleAddCollection"
-      @profile-click="handleProfileClick"
-      @home-click="handleHomeClick"
-    />
-
-    <!-- Main Content -->
-    <div class="collection-content">
-      <!-- Top Navbar with Collection Name -->
-      <div class="collection-navbar">
-        <h1>{{ collectionName }}</h1>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="isLoading" class="loading-state">Loading collection...</div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="error-state">
-        <p>Error loading collection: {{ error }}</p>
-        <button @click="fetchCollectionDetails" class="btn-retry">Retry</button>
-      </div>
-
-      <!-- Collection Recipes -->
-      <div v-else class="recipes-section">
-        <div v-if="recipes.length > 0" class="recipes-grid">
-          <RecipeDisplay
-            v-for="recipe in recipes"
-            :key="recipe._id"
-            :recipe="recipe"
-            @click="onRecipeClick"
-          />
-        </div>
-        <p v-else class="empty-state">
-          This collection doesn't have any recipes yet. Add some from the
-          sidebar!
-        </p>
-      </div>
+  <div class="collection-content">
+    <!-- Top Navbar with Collection Name -->
+    <div class="collection-navbar">
+      <h1>{{ collectionName }}</h1>
     </div>
 
-    <!-- Add Recipe Popup -->
-    <AddRecipePopup
-      :isOpen="isAddRecipePopupOpen"
-      :collections="userCollections"
-      @close="closeAddRecipePopup"
-      @submit="handleRecipeSubmit"
-    />
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-state">Loading collection...</div>
 
-    <!-- Add Collection Popup -->
-    <AddCollectionPopup
-      :isOpen="isAddCollectionPopupOpen"
-      @close="closeAddCollectionPopup"
-      @submit="handleCollectionSubmit"
-    />
+    <!-- Error State -->
+    <div v-else-if="error" class="error-state">
+      <p>Error loading collection: {{ error }}</p>
+      <button @click="fetchCollectionDetails" class="btn-retry">Retry</button>
+    </div>
+
+    <!-- Collection Recipes -->
+    <div v-else class="recipes-section">
+      <div v-if="recipes.length > 0" class="recipes-grid">
+        <RecipeDisplay
+          v-for="recipe in recipes"
+          :key="recipe._id"
+          :recipe="recipe"
+          @click="onRecipeClick"
+        />
+      </div>
+      <p v-else class="empty-state">
+        This collection doesn't have any recipes yet. Add some from the
+        sidebar!
+      </p>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
-import AddRecipePopup from "../components/AddRecipePopup.vue";
-import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import {
   viewCollection,
   getMyCollections,
@@ -89,13 +60,6 @@ const members = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
 
-// Popup state
-const isAddRecipePopupOpen = ref(false);
-const isAddCollectionPopupOpen = ref(false);
-
-// Collections data for recipe popup
-const userCollections = ref([]);
-
 // Helper function to get auth token
 function getToken() {
   return token.value || "demo-token";
@@ -104,18 +68,7 @@ function getToken() {
 // Fetch collection details on mount
 onMounted(async () => {
   await fetchCollectionDetails();
-  await fetchCollections();
 });
-
-async function fetchCollections() {
-  try {
-    const authToken = getToken();
-    const response = await getMyCollections(authToken);
-    userCollections.value = response;
-  } catch (error) {
-    console.error("Failed to fetch collections:", error);
-  }
-}
 
 async function fetchCollectionDetails() {
   isLoading.value = true;
@@ -160,96 +113,9 @@ function onRecipeClick(recipe) {
     query: { recipe: encodeURIComponent(JSON.stringify(recipe)) },
   });
 }
-
-function handleAddRecipe() {
-  console.log("Add recipe clicked");
-  isAddRecipePopupOpen.value = true;
-}
-
-function closeAddRecipePopup() {
-  isAddRecipePopupOpen.value = false;
-}
-
-async function handleRecipeSubmit(recipeData) {
-  try {
-    const authToken = getToken();
-
-    // Create the recipe - returns the recipe ID
-    const recipeId = await createRecipe(
-      authToken,
-      recipeData.name,
-      recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
-      recipeData.image?.trim() || undefined
-    );
-    console.log("Recipe created with ID:", recipeId);
-
-    // Add ingredients if provided
-    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
-      try {
-        const ingredients = await parseIngredients(
-          authToken,
-          recipeId,
-          recipeData.ingredientsText
-        );
-        console.log("Ingredients added:", ingredients);
-      } catch (error) {
-        console.error("Failed to add ingredients:", error);
-      }
-    }
-
-    // Add the recipe to the selected collection if one was chosen
-    if (recipeData.collection && recipeId) {
-      try {
-        await addItemToCollection(authToken, recipeData.collection, recipeId);
-        console.log(`Added recipe to collection: ${recipeData.collection}`);
-      } catch (error) {
-        console.error("Failed to add recipe to collection:", error);
-      }
-    }
-
-    alert(`Recipe "${recipeData.name}" created successfully!`);
-
-    // Refresh collection to show new recipe if it was added to this collection
-    if (recipeData.collection === collectionId.value) {
-      await fetchCollectionDetails();
-    }
-  } catch (error) {
-    console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
-  }
-}
-
-function handleAddCollection() {
-  console.log("Add collection clicked");
-  isAddCollectionPopupOpen.value = true;
-}
-
-function closeAddCollectionPopup() {
-  isAddCollectionPopupOpen.value = false;
-}
-
-function handleCollectionSubmit(collectionData) {
-  console.log("Collection submitted:", collectionData);
-  // Here you would typically send the data to your backend API
-  alert(`Collection "${collectionData.name}" created successfully!`);
-}
-
-function handleProfileClick() {
-  router.push("/profile");
-}
-
-function handleHomeClick() {
-  router.push("/");
-}
 </script>
 
 <style scoped>
-.collection-layout {
-  display: flex;
-  min-height: 100vh;
-}
-
 .collection-content {
   flex: 1;
   background: #f9fafb;
