@@ -1,14 +1,22 @@
 .sidebar {
   width: 260px;
-  min-height: 100vh;
+  height: 100vh;
   background: var(--color-bg-light, #ffffff);
   border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 260px;
+  align-self: stretch;
+  overflow: hidden;
+}
+
+.sidebar-content {
+  flex: 1;
   padding: 1.5rem 1rem;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  flex: 0 0 260px;
-  align-self: stretch;
 }
 
 .sidebar-title h1 {
@@ -157,11 +165,12 @@
   box-shadow: 0 4px 8px rgba(255, 107, 53, 0.3);
 }
 
-/* Logout Section - pushes to bottom */
+/* Logout Section - always at bottom */
 .logout-section {
-  margin-top: auto;
-  padding-top: 1rem;
+  flex-shrink: 0;
+  padding: 1rem;
   border-top: 1px solid #e5e7eb;
+  background: var(--color-bg-light, #ffffff);
 }
 
 .logout-button {

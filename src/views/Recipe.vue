@@ -6,6 +6,7 @@
       @add-collection="handleAddCollection"
       @profile-click="handleProfileClick"
       @home-click="handleHomeClick"
+      @logout="handleLogout"
     />
 
     <!-- Main Content -->
@@ -116,7 +117,7 @@ import { useAuth } from "../composables/useAuth.js";
 
 const router = useRouter();
 const route = useRoute();
-const { token, isLoggedIn } = useAuth();
+const { token, isLoggedIn, logout } = useAuth();
 
 // Recipe data
 const recipe = ref({
@@ -299,6 +300,11 @@ function handleProfileClick() {
 }
 
 function handleHomeClick() {
+  router.push("/");
+}
+
+function handleLogout() {
+  logout();
   router.push("/");
 }
 </script>

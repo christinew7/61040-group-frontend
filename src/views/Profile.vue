@@ -6,6 +6,7 @@
       @add-collection="handleAddCollection"
       @profile-click="handleProfileClick"
       @home-click="handleHomeClick"
+      @logout="handleLogout"
     />
 
     <!-- Main Content -->

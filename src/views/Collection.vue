@@ -122,7 +122,7 @@ import { useAuth } from "../composables/useAuth.js";
 
 const router = useRouter();
 const route = useRoute();
-const { token, logout, user } = useAuth();
+const { token, logout, user, init } = useAuth();
 
 // Collection data
 const collectionId = ref(route.params.id);
@@ -135,7 +135,7 @@ const error = ref(null);
 
 // Computed property to check if current user is the collection owner
 const isOwner = computed(() => {
-  return user.value?.id === collectionOwner.value;
+  return user.value?.userId === collectionOwner.value;
 });
 
 // Popup state
@@ -154,6 +154,9 @@ function getToken() {
 
 // Fetch collection details on mount
 onMounted(async () => {
+  // Initialize auth (fetch user profile if not already loaded)
+  await init();
+  
   await fetchCollectionDetails();
   await fetchCollections();
 });
@@ -175,6 +178,8 @@ async function fetchCollectionDetails() {
   try {
     const authToken = getToken();
     const data = await viewCollection(authToken, collectionId.value);
+
+    console.log("Collection data:", data);
 
     // viewCollection returns { items: [...], members: [...] }
     // items are recipe IDs (strings), not full recipe objects
@@ -213,7 +218,9 @@ async function fetchCollectionDetails() {
     collectionOwner.value = route.query.owner || "";
 
     console.log("Collection owner:", collectionOwner.value);
-    console.log("Current user:", user.value?.id);
+    console.log("Current user object:", user.value);
+    console.log("Current user ID:", user.value?.id);
+    console.log("Current user _id:", user.value?._id);
     console.log("Is owner:", isOwner.value);
   } catch (err) {
     console.error("Failed to fetch collection details:", err);
