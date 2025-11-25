@@ -1,22 +1,25 @@
 <template>
   <aside class="sidebar">
-    <div class="sidebar-content">
-      <!-- Title -->
-      <div class="sidebar-title" @click="handleHomeClick">
-        <h1>cooked!</h1>
-      </div>
+    <!-- Title -->
+    <div class="sidebar-title" @click="handleHomeClick">
+      <h1>cooked!</h1>
+    </div>
 
-      <!-- Navigation Links -->
-      <div class="profile-section">
-        <div class="profile-label" @click="handleHomeClick">Home</div>
-        <div
-          v-if="isLoggedIn"
-          class="profile-label"
-          @click="handleProfileClick"
-        >
-          My Profile
-        </div>
-      </div>
+    <!-- Navigation Links -->
+    <div class="profile-section">
+      <div class="profile-label" @click="handleHomeClick">Home</div>
+      <div v-if="isLoggedIn" class="profile-label" @click="handleProfileClick">My Profile</div>
+    </div>
+
+    <!-- Action Buttons (always visible) -->
+    <div class="subtabs">
+      <button class="subtab-button" @click="handleAddRecipe">
+        + Add Recipe
+      </button>
+      <button class="subtab-button" @click="handleAddCollection">
+        + Add Collection
+      </button>
+    </div>
 
       <!-- Auth Section -->
       <div v-if="!isLoggedIn" class="auth-section">
@@ -74,11 +77,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Logout Button at Bottom (only when logged in) -->
-    <div v-if="isLoggedIn" class="logout-section">
-      <button @click="handleLogout" class="logout-button">Logout</button>
-    </div>
   </aside>
 </template>
 
@@ -102,8 +100,7 @@ const emit = defineEmits([
   "ingredient-filter-change",
   "profile-click",
   "home-click",
-  "sign-in",
-  "logout",
+  "sign-in"
 ]);
 
 const { isLoggedIn } = useAuth();
@@ -112,10 +109,6 @@ const { isLoggedIn } = useAuth();
 const recipeSearchQuery = ref("");
 const ingredientFilterInput = ref("");
 const selectedIngredients = ref([]);
-
-function handleSignIn() {
-  emit("sign-in");
-}
 
 function handleProfileClick() {
   emit("profile-click");
@@ -139,10 +132,6 @@ function handleAddCollection() {
     return;
   }
   emit("add-collection");
-}
-
-function handleLogout() {
-  emit("logout");
 }
 
 function handleRecipeSearch() {
