@@ -307,6 +307,7 @@ function onRecipeClick(recipe) {
     query: {
       owner: recipe.owner,
       title: recipe.title,
+      recipe: JSON.stringify(recipe),
     },
   });
 }
