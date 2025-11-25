@@ -8,6 +8,7 @@
   flex: 0 0 260px;
   align-self: stretch;
   overflow: hidden;
+  padding: 1rem;
 }
 
 .sidebar-content {

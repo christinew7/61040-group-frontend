@@ -26,16 +26,6 @@
         <button @click="handleSignIn" class="signin-button">Sign In</button>
       </div>
 
-      <!-- Action Buttons (always visible) -->
-      <div class="subtabs">
-        <button class="subtab-button" @click="handleAddRecipe">
-          + Add Recipe
-        </button>
-        <button class="subtab-button" @click="handleAddCollection">
-          + Add Collection
-        </button>
-      </div>
-
       <!-- Conditional Search Section -->
       <div v-if="showSearch" class="search-section">
         <h3 class="section-heading">Search</h3>
@@ -76,7 +66,6 @@
           />
         </div>
       </div>
-    </div>
   </aside>
 </template>
 
