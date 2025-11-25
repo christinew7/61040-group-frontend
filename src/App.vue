@@ -208,12 +208,12 @@ async function handleRecipeSubmit(recipeData) {
     // Refresh recipes and collections
     await fetchRecipes();
     await fetchCollections();
-    
+
     // Force refresh the current view if on profile page
-    if (route.name === 'Profile') {
+    if (route.name === "Profile") {
       router.go(0); // Reload the current route
     }
-    
+
     // If on a collection or home page, we might want to refresh the view
     // For now, just navigating to the new recipe or staying put is fine
   } catch (error) {
@@ -249,13 +249,13 @@ async function handleParsedRecipeSubmit(submissionData) {
     }
 
     alert("Recipe created successfully from link!");
-    
+
     // Refresh recipes and collections
     await fetchRecipes();
     await fetchCollections();
-    
+
     // Force refresh the current view if on profile page
-    if (route.name === 'Profile') {
+    if (route.name === "Profile") {
       router.go(0); // Reload the current route
     }
   } catch (error) {
