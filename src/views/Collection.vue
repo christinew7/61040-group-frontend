@@ -6,6 +6,7 @@
       @add-collection="handleAddCollection"
       @profile-click="handleProfileClick"
       @home-click="handleHomeClick"
+      @logout="handleLogout"
     />
 
     <!-- Main Content -->
@@ -17,7 +18,11 @@
           <button @click="showAddMemberDialog" class="btn-action">
             + Add Member
           </button>
-          <button @click="handleDeleteCollection" class="btn-action btn-danger">
+          <button
+            v-if="isOwner"
+            @click="handleDeleteCollection"
+            class="btn-action btn-danger"
+          >
             Delete Collection
           </button>
         </div>
@@ -94,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
@@ -110,21 +115,28 @@ import {
 import {
   createRecipe,
   getAllMyRecipes,
+  getAllRecipesGlobal,
   parseIngredients,
 } from "../api/Recipe.js";
 import { useAuth } from "../composables/useAuth.js";
 
 const router = useRouter();
 const route = useRoute();
-const { token } = useAuth();
+const { token, logout, user } = useAuth();
 
 // Collection data
 const collectionId = ref(route.params.id);
 const collectionName = ref("");
+const collectionOwner = ref("");
 const recipes = ref([]);
 const members = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
+
+// Computed property to check if current user is the collection owner
+const isOwner = computed(() => {
+  return user.value?.id === collectionOwner.value;
+});
 
 // Popup state
 const isAddRecipePopupOpen = ref(false);
@@ -169,19 +181,40 @@ async function fetchCollectionDetails() {
     const recipeIds = data.items || [];
     members.value = data.members || [];
 
-    // Fetch all user's recipes
-    const allRecipes = await getAllMyRecipes(authToken);
+    console.log("Collection recipe IDs:", recipeIds);
+    console.log("Number of recipe IDs in collection:", recipeIds.length);
+
+    // Fetch all recipes globally (needed for shared collections where recipes belong to other users)
+    const allRecipes = await getAllRecipesGlobal();
+    console.log("All global recipes fetched:", allRecipes.length);
+    console.log("First few global recipes:", allRecipes.slice(0, 3));
 
     // Filter to only show recipes that are in this collection
-    recipes.value = allRecipes.filter((recipe) =>
-      recipeIds.includes(recipe._id)
-    );
+    recipes.value = allRecipes.filter((recipe) => {
+      const isMatch = recipeIds.includes(recipe._id);
+      if (isMatch) {
+        console.log("Match found for recipe:", recipe._id, recipe.title);
+      }
+      return isMatch;
+    });
 
-    console.log("Collection recipe IDs:", recipeIds);
     console.log("Filtered recipes:", recipes.value);
+    console.log("Number of filtered recipes:", recipes.value.length);
+
+    // If we have recipe IDs but no matches, log for debugging
+    if (recipeIds.length > 0 && recipes.value.length === 0) {
+      console.warn("Collection has recipe IDs but no matching recipes found!");
+      console.log("Sample recipe ID from collection:", recipeIds[0]);
+      console.log("Sample recipe ID from global:", allRecipes[0]?._id);
+    }
 
     // Get collection name from route query or use a default
     collectionName.value = route.query.name || "Collection";
+    collectionOwner.value = route.query.owner || "";
+
+    console.log("Collection owner:", collectionOwner.value);
+    console.log("Current user:", user.value?.id);
+    console.log("Is owner:", isOwner.value);
   } catch (err) {
     console.error("Failed to fetch collection details:", err);
     error.value = err.message;
@@ -332,6 +365,11 @@ async function handleDeleteCollection() {
     console.error("Failed to delete collection:", error);
     alert(`Failed to delete collection: ${error.message}`);
   }
+}
+
+async function handleLogout() {
+  await logout();
+  router.push("/");
 }
 </script>
 

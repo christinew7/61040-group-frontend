@@ -159,7 +159,12 @@ import {
   addMemberToCollection,
   addItemToCollection,
 } from "../api/Collecting.js";
-import { createRecipe, parseIngredients, getAllMyRecipes, setImage } from "../api/Recipe.js";
+import {
+  createRecipe,
+  parseIngredients,
+  getAllMyRecipes,
+  setImage,
+} from "../api/Recipe.js";
 import { getProfile, updateDisplayName, deleteAccount } from "../api/User.js";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
 
@@ -324,7 +329,10 @@ function onCollectionClick(collection) {
   router.push({
     name: "Collection",
     params: { id: collection._id },
-    query: { name: collection.name },
+    query: {
+      name: collection.name,
+      owner: collection.owner,
+    },
   });
 }
 
@@ -358,7 +366,7 @@ async function handleRecipeSubmit(recipeData) {
       authToken,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
+      recipeData.description?.trim() || undefined
     );
     console.log("Recipe created with ID:", recipeId);
 
@@ -367,7 +375,7 @@ async function handleRecipeSubmit(recipeData) {
       throw new Error("Recipe creation failed - no ID returned");
     }
 
-        // Set image if provided
+    // Set image if provided
     if (recipeData.image?.trim()) {
       try {
         await setImage(token.value, recipeId, recipeData.image);

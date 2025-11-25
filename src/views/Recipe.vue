@@ -105,7 +105,12 @@ import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
-import { getRecipe, createRecipe, parseIngredients, setImage } from "../api/Recipe.js";
+import {
+  getRecipe,
+  createRecipe,
+  parseIngredients,
+  setImage,
+} from "../api/Recipe.js";
 import { getMyCollections, addItemToCollection } from "../api/Collecting.js";
 import { useAuth } from "../composables/useAuth.js";
 
@@ -134,7 +139,6 @@ const userCollections = ref([]);
 
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
-
 // Fetch recipe details on mount
 onMounted(async () => {
   await fetchRecipeDetails();
@@ -143,7 +147,7 @@ onMounted(async () => {
 
 async function fetchCollections() {
   if (!token.value) return; // Skip if not logged in
-  
+
   try {
     const response = await getMyCollections(token.value);
     userCollections.value = response;
@@ -157,19 +161,37 @@ async function fetchRecipeDetails() {
   error.value = null;
 
   try {
+    // First, try to get recipe from query params (passed from collection/profile)
+    if (route.query.recipe) {
+      try {
+        recipe.value = JSON.parse(decodeURIComponent(route.query.recipe));
+        console.log("Recipe loaded from query params:", recipe.value);
+        console.log("Recipe image:", recipe.value?.image);
+        console.log("Recipe ingredients:", recipe.value?.ingredients);
+        isLoading.value = false;
+        return;
+      } catch (parseErr) {
+        console.error("Failed to parse recipe from query params:", parseErr);
+        // Continue to API fallback
+      }
+    }
+
+    // Fallback: Try to fetch from API using owner and title
     const owner = route.query.owner;
     const title = route.query.title;
 
     if (!owner || !title) {
-      throw new Error("Recipe information missing. Please navigate from your profile or collections.");
+      throw new Error(
+        "Recipe information missing. Please navigate from your profile or collections."
+      );
     }
 
     console.log("Fetching recipe:", { owner, title });
 
     // Use public getRecipe (no auth needed)
     const data = await getRecipe(owner, title);
-    console.log("Raw API response:", data)
-    
+    console.log("Raw API response:", data);
+
     // Extract recipe from response
     let recipes = data;
     if (Array.isArray(recipes) && recipes.length > 0) {
