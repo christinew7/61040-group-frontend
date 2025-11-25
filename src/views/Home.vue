@@ -20,13 +20,19 @@
 
       <!-- All Recipes Section -->
       <section v-else class="recipes-section">
-        <h3>All Recipes</h3>
-        <div v-if="allRecipes.length === 0" class="empty-state">
+        <h3>All Recipes ({{ filteredRecipes.length }})</h3>
+        <div
+          v-if="filteredRecipes.length === 0 && allRecipes.length === 0"
+          class="empty-state"
+        >
           No recipes found. Create one to get started!
+        </div>
+        <div v-else-if="filteredRecipes.length === 0" class="empty-state">
+          No recipes match your search criteria.
         </div>
         <div v-else class="recipes-grid">
           <RecipeDisplay
-            v-for="recipe in allRecipes"
+            v-for="recipe in filteredRecipes"
             :key="recipe._id"
             :recipe="recipe"
             @click="onRecipeClick"
@@ -71,7 +77,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
 import LoginPopup from "../components/LoginPopup.vue";
@@ -86,6 +92,7 @@ import {
   parseIngredients,
   setImage,
   getAllRecipesGlobal,
+  searchRecipes,
 } from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
 
@@ -95,6 +102,38 @@ const showLogin = ref(false);
 // Recipes from API
 const allRecipes = ref([]);
 const isLoading = ref(false);
+
+// Search and filter state
+const searchQuery = ref("");
+const ingredientFilters = ref([]);
+
+// Computed filtered recipes
+const filteredRecipes = computed(() => {
+  let recipes = allRecipes.value;
+
+  // Filter by search query (recipe title)
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    recipes = recipes.filter((recipe) =>
+      recipe.title?.toLowerCase().includes(query)
+    );
+  }
+
+  // Filter by ingredients
+  if (ingredientFilters.value.length > 0) {
+    recipes = recipes.filter((recipe) => {
+      // Check if recipe has all the filtered ingredients
+      return ingredientFilters.value.every((filterIngredient) => {
+        const filterLower = filterIngredient.toLowerCase();
+        return recipe.ingredients?.some((ingredient) =>
+          ingredient.name?.toLowerCase().includes(filterLower)
+        );
+      });
+    });
+  }
+
+  return recipes;
+});
 
 onMounted(async () => {
   await init();
@@ -168,10 +207,6 @@ const sampleCollection = ref({
     },
   ],
 });
-
-// Search and filter state
-const searchQuery = ref("");
-const ingredientFilters = ref([]);
 
 // Popup state
 const isAddRecipePopupOpen = ref(false);
@@ -275,9 +310,36 @@ function handleCollectionSubmit(collectionData) {
   alert(`Collection "${collectionData.name}" created successfully!`);
 }
 
-function handleRecipeSearch(query) {
-  console.log("Search recipes:", query);
+async function handleRecipeSearch(query) {
+  console.log("Home - handleRecipeSearch received query:", query);
+  console.log("Query type:", typeof query, "Query length:", query?.length);
   searchQuery.value = query;
+
+  // If search query is empty or too short, fetch all recipes
+  if (!query || !query.trim()) {
+    console.log("Empty query, fetching all recipes");
+    await fetchAllRecipes();
+    return;
+  }
+
+  // Trim the query
+  const trimmedQuery = query.trim();
+  
+  // Call API to search by title
+  console.log("Calling searchRecipes API with:", trimmedQuery);
+  isLoading.value = true;
+  try {
+    const recipes = await searchRecipes(trimmedQuery);
+    allRecipes.value = recipes || [];
+    console.log("Search results:", allRecipes.value.length, "recipes found");
+  } catch (error) {
+    console.error("Failed to search recipes:", error);
+    // On error, show empty results instead of crashing
+    allRecipes.value = [];
+    alert(`Search failed: ${error.message}`);
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 function handleIngredientFilter(ingredients) {
