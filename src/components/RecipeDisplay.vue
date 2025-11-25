@@ -32,7 +32,7 @@ const imageUrl = computed(() => {
   }
   // Fallback placeholder image
   // TODO: send in an image that is just a fork and knife . some more food related default image
-  return "https://via.placeholder.com/600x400?text=No+Image";
+  return "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 });
 
 const title = computed(() => {

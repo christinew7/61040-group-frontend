@@ -36,7 +36,7 @@ const imageUrl = computed(() => {
     }
   }
   // TODO: find a better placeholder image?
-  return "https://via.placeholder.com/600x400?text=Collection";
+  return "https://placehold.co/600x400/e2e8f0/64748b?text=Collection";
 });
 
 const collectionName = computed(() => {

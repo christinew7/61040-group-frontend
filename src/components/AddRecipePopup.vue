@@ -45,21 +45,75 @@
             />
           </div>
 
-          <!-- Step 4: Add to Collection -->
+          <!-- Step 4: Add Image -->
           <div class="form-section">
-            <h3>4. Add to Collection</h3>
+            <h3>4. Add Image</h3>
+            <div class="image-input-group">
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  v-model="imageInputType"
+                  value="url"
+                  name="imageType"
+                />
+                <span>Image URL</span>
+              </label>
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  v-model="imageInputType"
+                  value="upload"
+                  name="imageType"
+                />
+                <span>Upload Image</span>
+              </label>
+            </div>
+
+            <!-- Image URL Input -->
+            <div v-if="imageInputType === 'url'" class="input-container">
+              <input
+                v-model="formData.image"
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                class="form-input"
+              />
+            </div>
+
+            <!-- Image Upload Input -->
+            <div v-else class="input-container">
+              <input
+                type="file"
+                accept="image/*"
+                @change="handleImageUpload"
+                class="form-input file-input"
+              />
+              <p v-if="uploadedFileName" class="file-name">
+                Selected: {{ uploadedFileName }}
+              </p>
+            </div>
+
+            <p class="form-hint">Optional: Add an image for your recipe</p>
+          </div>
+
+          <!-- Step 5: Add to Collection -->
+          <div class="form-section">
+            <h3>5. Add to Collection</h3>
             <select v-model="formData.collection" class="form-select">
               <option value="">-- Select a collection --</option>
-              <option value="breakfast">Breakfast Favorites</option>
-              <option value="dinner">Dinner Ideas</option>
-              <option value="desserts">Desserts</option>
+              <option
+                v-for="collection in collections"
+                :key="collection._id"
+                :value="collection._id"
+              >
+                {{ collection.name }}
+              </option>
             </select>
             <p class="form-hint">Optional: Add this recipe to a collection</p>
           </div>
 
-          <!-- Step 5: Add Ingredients -->
+          <!-- Step 6: Add Ingredients -->
           <div class="form-section">
-            <h3>5. Add Ingredients</h3>
+            <h3>6. Add Ingredients</h3>
             <textarea
               v-model="formData.ingredientsText"
               placeholder="Enter one ingredient per line in format: quantity,unit,name&#10;Example:&#10;1,cup,flour&#10;2,tablespoons,sugar&#10;0.5,teaspoon,salt"
@@ -93,26 +147,51 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  collections: {
+    type: Array,
+    default: () => [],
+  },
 });
 
 const emit = defineEmits(["close", "submit"]);
+
+const imageInputType = ref("url");
+const uploadedFileName = ref("");
 
 const formData = ref({
   name: "",
   description: "",
   link: "",
+  image: "",
   collection: "",
   ingredientsText: "",
 });
+
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (file) {
+    uploadedFileName.value = file.name;
+
+    // Convert image to base64 data URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      formData.value.image = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
 
 function handleClose() {
   emit("close");
   // Reset form after a delay
   setTimeout(() => {
+    imageInputType.value = "url";
+    uploadedFileName.value = "";
     formData.value = {
       name: "",
       description: "",
       link: "",
+      image: "",
       collection: "",
       ingredientsText: "",
     };
@@ -120,6 +199,7 @@ function handleClose() {
 }
 
 function submitRecipe() {
+  console.log("Submitting recipe data:", formData.value);
   emit("submit", formData.value);
   handleClose();
 }

@@ -12,6 +12,7 @@ const api = axios.create({
 /**
  * @route POST api/Recipe/createRecipe
  * @desc Create a new recipe.
+ * @returns {Promise<string>} The ID of the created recipe
  */
 export async function createRecipe(
   token,
@@ -31,8 +32,19 @@ export async function createRecipe(
       description,
       image,
     });
-    return response.data.recipe;
+    console.log("API response for createRecipe:", response.data);
+    
+    // Check if response contains an error
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    
+    // Backend returns { recipe: recipeId } where recipe is just the ID string
+    const recipeId = response.data.recipe;
+    console.log("Created recipe ID:", recipeId);
+    return recipeId;
   } catch (err) {
+    console.error("createRecipe API error:", err.response?.data || err.message);
     throw new Error(err.response?.data?.error || "Failed to create recipe.");
   }
 }
@@ -83,6 +95,8 @@ export async function getAllMyRecipes(token) {
 
   try {
     const response = await api.post("/getAllMyRecipes", { token });
+    console.log("getAllMyRecipes response:", response.data);
+    console.log("First recipe (if exists):", response.data.recipes?.[0]);
     return response.data.recipes;
   } catch (err) {
     throw new Error(err.response?.data?.error || "Failed to fetch recipes.");
@@ -124,13 +138,20 @@ export async function getRecipe(token, recipeId) {
     throw new TypeError("Token and recipe ID are required.");
   }
 
+  console.log("getRecipe called with:", {
+    token: token.substring(0, 10) + "...",
+    recipeId,
+  });
+
   try {
     const response = await api.post("/getRecipe", {
       token,
       recipe: recipeId,
     });
+    console.log("getRecipe response:", response.data);
     return response.data.recipe;
   } catch (err) {
+    console.error("getRecipe error:", err.response?.data || err.message);
     throw new Error(err.response?.data?.error || "Failed to get recipe.");
   }
 }
@@ -204,14 +225,22 @@ export async function parseIngredients(token, recipeId, ingredientsText) {
     throw new TypeError("Token, recipe ID, and text are required.");
   }
 
+  console.log("parseIngredients called with:", {
+    token: token.substring(0, 10) + "...",
+    recipeId,
+    ingredientsText,
+  });
+
   try {
     const response = await api.post("/parseIngredients", {
       token,
       recipe: recipeId,
       ingredientsText,
     });
+    console.log("parseIngredients response:", response.data);
     return response.data.ingredients;
   } catch (err) {
+    console.error("parseIngredients error:", err.response?.data || err.message);
     throw new Error(
       err.response?.data?.error || "Failed to parse ingredients."
     );

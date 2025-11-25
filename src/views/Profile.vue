@@ -80,6 +80,7 @@
     <!-- Add Recipe Popup -->
     <AddRecipePopup
       :isOpen="isAddRecipePopupOpen"
+      :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
     />
@@ -107,14 +108,22 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useAuth } from "../composables/useAuth.js";
 import Sidebar from "../components/Sidebar.vue";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import ConfirmationPopup from "../components/ConfirmationPopup.vue";
-import { getMyCollections } from "../api/Collecting.js";
+import {
+  getMyCollections,
+  createCollection,
+  addMemberToCollection,
+  addItemToCollection,
+} from "../api/Collecting.js";
+import { createRecipe, parseIngredients } from "../api/Recipe.js";
 
 const router = useRouter();
+const { token, user, logout } = useAuth();
 
 // Popup state
 const isAddRecipePopupOpen = ref(false);
@@ -135,15 +144,19 @@ onMounted(async () => {
   await fetchCollections();
 });
 
+// Helper function to get auth token
+function getToken() {
+  return token.value || "demo-token";
+}
+
 async function fetchCollections() {
   isLoadingCollections.value = true;
   collectionsError.value = null;
 
   try {
-    // TODO: Replace with actual token from your auth system
-    const token = localStorage.getItem("authToken") || "demo-token";
-    const collections = await getMyCollections(token);
-    userCollections.value = collections;
+    const authToken = getToken();
+    const response = await getMyCollections(authToken);
+    userCollections.value = response;
   } catch (error) {
     console.error("Failed to fetch collections:", error);
     collectionsError.value = error.message;
@@ -164,8 +177,8 @@ function saveDisplayName() {
 }
 
 function handleLogout() {
-  // TODO: Call logout API and redirect to login
-  alert("Account would be logged out, logout api!");
+  logout();
+  router.push("/"); // Redirect to home or login page after logout
 }
 
 function handleDeleteAccount() {
@@ -201,10 +214,67 @@ function closeAddRecipePopup() {
   isAddRecipePopupOpen.value = false;
 }
 
-function handleRecipeSubmit(recipeData) {
-  console.log("Recipe submitted:", recipeData);
-  // Here you would typically send the data to your backend API
-  alert(`Recipe "${recipeData.name}" created successfully!`);
+async function handleRecipeSubmit(recipeData) {
+  try {
+    const authToken = getToken();
+
+    console.log("Creating recipe with data:", {
+      name: recipeData.name,
+      link: recipeData.link,
+      description: recipeData.description,
+      image: recipeData.image,
+    });
+
+    // Create the recipe - returns the recipe ID
+    // Convert empty strings to undefined for optional fields
+    const recipeId = await createRecipe(
+      authToken,
+      recipeData.name,
+      recipeData.link?.trim() || undefined,
+      recipeData.description?.trim() || undefined,
+      recipeData.image?.trim() || undefined
+    );
+    console.log("Recipe created with ID:", recipeId);
+
+    // Check if recipe was created successfully
+    if (!recipeId) {
+      throw new Error("Recipe creation failed - no ID returned");
+    }
+
+    // Add ingredients if provided
+    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
+      try {
+        const ingredients = await parseIngredients(
+          authToken,
+          recipeId,
+          recipeData.ingredientsText
+        );
+        console.log("Ingredients added:", ingredients);
+      } catch (error) {
+        console.error("Failed to add ingredients:", error);
+        // Continue even if adding ingredients fails
+      }
+    }
+
+    // Add the recipe to the selected collection if one was chosen
+    if (recipeData.collection && recipeId) {
+      try {
+        await addItemToCollection(authToken, recipeData.collection, recipeId);
+        console.log(`Added recipe to collection: ${recipeData.collection}`);
+
+        // Refresh collections to show updated recipe count
+        await fetchCollections();
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+        // Continue even if adding to collection fails
+      }
+    }
+
+    alert(`Recipe "${recipeData.name}" created successfully!`);
+  } catch (error) {
+    console.error("Failed to create recipe:", error);
+    alert(`Failed to create recipe: ${error.message}`);
+  }
 }
 
 function handleAddCollection() {
@@ -216,10 +286,51 @@ function closeAddCollectionPopup() {
   isAddCollectionPopupOpen.value = false;
 }
 
-function handleCollectionSubmit(collectionData) {
-  console.log("Collection submitted:", collectionData);
-  // Here you would typically send the data to your backend API
-  alert(`Collection "${collectionData.name}" created successfully!`);
+async function handleCollectionSubmit(collectionData) {
+  try {
+    const authToken = getToken();
+
+    // Create the collection
+    const newCollection = await createCollection(
+      authToken,
+      collectionData.name
+    );
+    console.log("Collection created:", newCollection);
+
+    // Add shared users to the collection
+    if (collectionData.sharedUsers && collectionData.sharedUsers.length > 0) {
+      for (const email of collectionData.sharedUsers) {
+        try {
+          await addMemberToCollection(authToken, newCollection._id, email);
+          console.log(`Added member: ${email}`);
+        } catch (error) {
+          console.error(`Failed to add member ${email}:`, error);
+          // Continue adding other members even if one fails
+        }
+      }
+    }
+
+    // Add recipes to the collection
+    if (collectionData.recipes && collectionData.recipes.length > 0) {
+      for (const recipeId of collectionData.recipes) {
+        try {
+          await addItemToCollection(authToken, newCollection._id, recipeId);
+          console.log(`Added recipe: ${recipeId}`);
+        } catch (error) {
+          console.error(`Failed to add recipe ${recipeId}:`, error);
+          // Continue adding other recipes even if one fails
+        }
+      }
+    }
+
+    // Refresh the collections list
+    await fetchCollections();
+
+    alert(`Collection "${collectionData.name}" created successfully!`);
+  } catch (error) {
+    console.error("Failed to create collection:", error);
+    alert(`Failed to create collection: ${error.message}`);
+  }
 }
 
 function handleProfileClick() {

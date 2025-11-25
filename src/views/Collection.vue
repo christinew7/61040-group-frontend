@@ -43,6 +43,7 @@
     <!-- Add Recipe Popup -->
     <AddRecipePopup
       :isOpen="isAddRecipePopupOpen"
+      :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
     />
@@ -63,10 +64,21 @@ import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
-import { viewCollection } from "../api/Collecting.js";
+import {
+  viewCollection,
+  getMyCollections,
+  addItemToCollection,
+} from "../api/Collecting.js";
+import {
+  createRecipe,
+  getAllMyRecipes,
+  parseIngredients,
+} from "../api/Recipe.js";
+import { useAuth } from "../composables/useAuth.js";
 
 const router = useRouter();
 const route = useRoute();
+const { token } = useAuth();
 
 // Collection data
 const collectionId = ref(route.params.id);
@@ -80,23 +92,53 @@ const error = ref(null);
 const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
 
+// Collections data for recipe popup
+const userCollections = ref([]);
+
+// Helper function to get auth token
+function getToken() {
+  return token.value || "demo-token";
+}
+
 // Fetch collection details on mount
 onMounted(async () => {
   await fetchCollectionDetails();
+  await fetchCollections();
 });
+
+async function fetchCollections() {
+  try {
+    const authToken = getToken();
+    const response = await getMyCollections(authToken);
+    userCollections.value = response;
+  } catch (error) {
+    console.error("Failed to fetch collections:", error);
+  }
+}
 
 async function fetchCollectionDetails() {
   isLoading.value = true;
   error.value = null;
 
   try {
-    // TODO: Replace with actual token from your auth system
-    const token = localStorage.getItem("authToken") || "demo-token";
-    const data = await viewCollection(token, collectionId.value);
+    const authToken = getToken();
+    const data = await viewCollection(authToken, collectionId.value);
 
     // viewCollection returns { items: [...], members: [...] }
-    recipes.value = data.items || [];
+    // items are recipe IDs (strings), not full recipe objects
+    const recipeIds = data.items || [];
     members.value = data.members || [];
+
+    // Fetch all user's recipes
+    const allRecipes = await getAllMyRecipes(authToken);
+
+    // Filter to only show recipes that are in this collection
+    recipes.value = allRecipes.filter((recipe) =>
+      recipeIds.includes(recipe._id)
+    );
+
+    console.log("Collection recipe IDs:", recipeIds);
+    console.log("Filtered recipes:", recipes.value);
 
     // Get collection name from route query or use a default
     collectionName.value = route.query.name || "Collection";
@@ -127,12 +169,54 @@ function closeAddRecipePopup() {
   isAddRecipePopupOpen.value = false;
 }
 
-function handleRecipeSubmit(recipeData) {
-  console.log("Recipe submitted:", recipeData);
-  // Here you would typically send the data to your backend API
-  alert(`Recipe "${recipeData.name}" created successfully!`);
-  // Refresh collection to show new recipe if it was added to this collection
-  fetchCollectionDetails();
+async function handleRecipeSubmit(recipeData) {
+  try {
+    const authToken = getToken();
+
+    // Create the recipe - returns the recipe ID
+    const recipeId = await createRecipe(
+      authToken,
+      recipeData.name,
+      recipeData.link?.trim() || undefined,
+      recipeData.description?.trim() || undefined,
+      recipeData.image?.trim() || undefined
+    );
+    console.log("Recipe created with ID:", recipeId);
+
+    // Add ingredients if provided
+    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
+      try {
+        const ingredients = await parseIngredients(
+          authToken,
+          recipeId,
+          recipeData.ingredientsText
+        );
+        console.log("Ingredients added:", ingredients);
+      } catch (error) {
+        console.error("Failed to add ingredients:", error);
+      }
+    }
+
+    // Add the recipe to the selected collection if one was chosen
+    if (recipeData.collection && recipeId) {
+      try {
+        await addItemToCollection(authToken, recipeData.collection, recipeId);
+        console.log(`Added recipe to collection: ${recipeData.collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert(`Recipe "${recipeData.name}" created successfully!`);
+
+    // Refresh collection to show new recipe if it was added to this collection
+    if (recipeData.collection === collectionId.value) {
+      await fetchCollectionDetails();
+    }
+  } catch (error) {
+    console.error("Failed to create recipe:", error);
+    alert(`Failed to create recipe: ${error.message}`);
+  }
 }
 
 function handleAddCollection() {

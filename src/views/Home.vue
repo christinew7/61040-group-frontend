@@ -2,15 +2,22 @@
   <div class="home-layout">
     <!-- login/logout button -->
     <div class="auth-header">
-      <button v-if="!isLoggedIn" @click="showLogin = true" class="auth-button signin">
+      <button
+        v-if="!isLoggedIn"
+        @click="showLogin = true"
+        class="auth-button signin"
+      >
         Sign In
       </button>
       <div v-else class="auth-user">
-        <span class="welcome-text">Welcome, <strong>{{ user?.displayName }}</strong>!</span>
+        <span class="welcome-text"
+          >Welcome, <strong>{{ user?.displayName }}</strong
+          >!</span
+        >
         <button @click="handleLogout" class="auth-button logout">Logout</button>
       </div>
     </div>
-    
+
     <Sidebar
       :showSearch="true"
       @add-recipe="handleAddRecipe"
@@ -52,6 +59,7 @@
     <!-- Add Recipe Popup -->
     <AddRecipePopup
       :isOpen="isAddRecipePopupOpen"
+      :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
     />
@@ -63,12 +71,11 @@
       @submit="handleCollectionSubmit"
     />
     <!-- Add LoginPopup -->
-    <LoginPopup 
-      :isOpen="showLogin" 
+    <LoginPopup
+      :isOpen="showLogin"
       @close="showLogin = false"
       @success="onLoginSuccess"
     />
-    
   </div>
 </template>
 
@@ -82,13 +89,17 @@ import RecipeDisplay from "../components/RecipeDisplay.vue";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
+import { getMyCollections } from "../api/Collecting.js";
+import { createRecipe, parseIngredients } from "../api/Recipe.js";
+import { addItemToCollection } from "../api/Collecting.js";
 
-const { isLoggedIn, user, logout, init } = useAuth();
+const { isLoggedIn, user, logout, init, token } = useAuth();
 const showLogin = ref(false);
 
 // Initialize auth on mount
 onMounted(async () => {
   await init();
+  await fetchCollections();
 });
 
 function onLoginSuccess() {
@@ -149,6 +160,26 @@ const ingredientFilters = ref([]);
 const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
 
+// Collections data
+const userCollections = ref([]);
+
+// Helper function to get auth token
+function getToken() {
+  return token.value || "demo-token";
+}
+
+async function fetchCollections() {
+  if (!isLoggedIn.value) return;
+
+  try {
+    const authToken = getToken();
+    const response = await getMyCollections(authToken);
+    userCollections.value = response;
+  } catch (error) {
+    console.error("Failed to fetch collections:", error);
+  }
+}
+
 function handleAddRecipe() {
   console.log("Add recipe clicked");
   isAddRecipePopupOpen.value = true;
@@ -158,10 +189,49 @@ function closeAddRecipePopup() {
   isAddRecipePopupOpen.value = false;
 }
 
-function handleRecipeSubmit(recipeData) {
-  console.log("Recipe submitted:", recipeData);
-  // Here you would typically send the data to your backend API
-  alert(`Recipe "${recipeData.name}" created successfully!`);
+async function handleRecipeSubmit(recipeData) {
+  try {
+    const authToken = getToken();
+
+    // Create the recipe - returns the recipe ID
+    const recipeId = await createRecipe(
+      authToken,
+      recipeData.name,
+      recipeData.link?.trim() || undefined,
+      recipeData.description?.trim() || undefined,
+      recipeData.image?.trim() || undefined
+    );
+    console.log("Recipe created with ID:", recipeId);
+
+    // Add ingredients if provided
+    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
+      try {
+        const ingredients = await parseIngredients(
+          authToken,
+          recipeId,
+          recipeData.ingredientsText
+        );
+        console.log("Ingredients added:", ingredients);
+      } catch (error) {
+        console.error("Failed to add ingredients:", error);
+      }
+    }
+
+    // Add the recipe to the selected collection if one was chosen
+    if (recipeData.collection && recipeId) {
+      try {
+        await addItemToCollection(authToken, recipeData.collection, recipeId);
+        console.log(`Added recipe to collection: ${recipeData.collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert(`Recipe "${recipeData.name}" created successfully!`);
+  } catch (error) {
+    console.error("Failed to create recipe:", error);
+    alert(`Failed to create recipe: ${error.message}`);
+  }
 }
 
 function handleAddCollection() {
