@@ -5,18 +5,26 @@
       <h1>cooked!</h1>
     </div>
 
-    <!-- My Profile Section with Subtabs -->
-    <div class="profile-section">
-      <div class="profile-label" @click="handleProfileClick">My Profile</div>
+    <!-- Auth Section -->
+    <div v-if="!isLoggedIn" class="auth-section">
+      <button @click="handleSignIn" class="signin-button">
+        Sign In
+      </button>
+    </div>
 
-      <div class="subtabs">
-        <button class="subtab-button" @click="handleAddRecipe">
-          + Add Recipe
-        </button>
-        <button class="subtab-button" @click="handleAddCollection">
-          + Add Collection
-        </button>
-      </div>
+    <!-- My Profile Section (logged in only) -->
+    <div v-else class="profile-section">
+      <div class="profile-label" @click="handleProfileClick">My Profile</div>
+    </div>
+
+    <!-- Action Buttons (always visible) -->
+    <div class="subtabs">
+      <button class="subtab-button" @click="handleAddRecipe">
+        + Add Recipe
+      </button>
+      <button class="subtab-button" @click="handleAddCollection">
+        + Add Collection
+      </button>
     </div>
 
     <!-- Conditional Search Section -->
@@ -59,11 +67,19 @@
         />
       </div>
     </div>
+
+    <!-- Logout Button at Bottom (only when logged in) -->
+    <div v-if="isLoggedIn" class="logout-section">
+      <button @click="handleLogout" class="logout-button">
+        Logout
+      </button>
+    </div>
   </aside>
 </template>
 
 <script setup>
 import { ref } from "vue";
+import { useAuth } from "../composables/useAuth.js";
 import IngredientChip from "./IngredientChip.vue";
 import "./Sidebar.css";
 
@@ -80,23 +96,43 @@ const emit = defineEmits([
   "recipe-search",
   "ingredient-filter-change",
   "profile-click",
+  "sign-in",
+  "logout",
 ]);
+
+const { isLoggedIn } = useAuth();
 
 // Search state
 const recipeSearchQuery = ref("");
 const ingredientFilterInput = ref("");
 const selectedIngredients = ref([]);
 
+function handleSignIn() {
+  emit("sign-in");
+}
+
 function handleProfileClick() {
   emit("profile-click");
 }
 
 function handleAddRecipe() {
+  if (!isLoggedIn.value) {
+    emit("sign-in");
+    return;
+  }
   emit("add-recipe");
 }
 
 function handleAddCollection() {
+  if (!isLoggedIn.value) {
+    emit("sign-in");
+    return;
+  }
   emit("add-collection");
+}
+
+function handleLogout() {
+  emit("logout");
 }
 
 function handleRecipeSearch() {

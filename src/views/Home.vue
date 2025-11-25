@@ -1,23 +1,5 @@
 <template>
   <div class="home-layout">
-    <!-- login/logout button -->
-    <div class="auth-header">
-      <button
-        v-if="!isLoggedIn"
-        @click="showLogin = true"
-        class="auth-button signin"
-      >
-        Sign In
-      </button>
-      <div v-else class="auth-user">
-        <span class="welcome-text"
-          >Welcome, <strong>{{ user?.displayName }}</strong
-          >!</span
-        >
-        <button @click="handleLogout" class="auth-button logout">Logout</button>
-      </div>
-    </div>
-
     <Sidebar
       :showSearch="true"
       @add-recipe="handleAddRecipe"
@@ -25,6 +7,8 @@
       @recipe-search="handleRecipeSearch"
       @ingredient-filter-change="handleIngredientFilter"
       @profile-click="handleProfileClick"
+      @sign-in="showLogin = true"
+      @logout="handleLogout"
     />
 
     <div class="home-view">
@@ -70,7 +54,7 @@
       @close="closeAddCollectionPopup"
       @submit="handleCollectionSubmit"
     />
-    <!-- Add LoginPopup -->
+    <!-- Login Popup -->
     <LoginPopup
       :isOpen="showLogin"
       @close="showLogin = false"
@@ -93,21 +77,19 @@ import { getMyCollections } from "../api/Collecting.js";
 import { createRecipe, parseIngredients } from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
 
-const { isLoggedIn, user, logout, init, token } = useAuth();
+const { logout, init } = useAuth();
 const showLogin = ref(false);
 
-// Initialize auth on mount
 onMounted(async () => {
   await init();
-  await fetchCollections();
 });
-
-function onLoginSuccess() {
-  console.log("Login successful!", user.value);
-}
 
 async function handleLogout() {
   await logout();
+}
+
+function onLoginSuccess() {
+  console.log("Login successful!");
 }
 
 const router = useRouter();
@@ -321,67 +303,5 @@ function onCollectionClick(collection) {
 .debug-section p {
   margin: 0.5rem 0;
   font-size: 0.9rem;
-}
-
-.auth-header {
-  position: fixed;
-  top: 1rem;
-  right: 1.5rem;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.auth-user {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: white;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.welcome-text {
-  font-size: 0.95rem;
-  color: var(--color-text-dark, #0f172a);
-  padding-right: 1rem;
-  border-right: 1px solid #e5e7eb;
-}
-
-.welcome-text strong {
-  color: var(--color-primary);
-}
-
-.auth-button {
-  padding: 0.625rem 1.25rem;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.auth-button.signin {
-  background: var(--color-primary);
-  color: white;
-  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
-}
-
-.auth-button.signin:hover {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
-}
-
-.auth-button.logout {
-  background: #f3f4f6;
-  color: var(--color-text-dark, #0f172a);
-  border: 1px solid #e5e7eb;
-}
-
-.auth-button.logout:hover {
-  background: #e5e7eb;
 }
 </style>
