@@ -13,6 +13,14 @@
       <!-- Top Navbar with Collection Name -->
       <div class="collection-navbar">
         <h1>{{ collectionName }}</h1>
+        <div class="collection-actions">
+          <button @click="showAddMemberDialog" class="btn-action">
+            + Add Member
+          </button>
+          <button @click="handleDeleteCollection" class="btn-action btn-danger">
+            Delete Collection
+          </button>
+        </div>
       </div>
 
       <!-- Loading State -->
@@ -55,6 +63,33 @@
       @close="closeAddCollectionPopup"
       @submit="handleCollectionSubmit"
     />
+
+    <!-- Add Member Dialog -->
+    <div
+      v-if="isAddMemberDialogOpen"
+      class="modal-overlay"
+      @click="closeAddMemberDialog"
+    >
+      <div class="modal-content" @click.stop>
+        <h2>Add Member to Collection</h2>
+        <p>Enter the email address of the user you want to add:</p>
+        <input
+          v-model="newMemberEmail"
+          type="email"
+          placeholder="user@example.com"
+          class="member-input"
+          @keydown.enter="handleAddMember"
+        />
+        <div class="modal-actions">
+          <button @click="handleAddMember" class="btn-primary">
+            Add Member
+          </button>
+          <button @click="closeAddMemberDialog" class="btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -69,6 +104,8 @@ import {
   viewCollection,
   getMyCollections,
   addItemToCollection,
+  deleteCollection,
+  addMemberToCollection,
 } from "../api/Collecting.js";
 import {
   createRecipe,
@@ -92,6 +129,8 @@ const error = ref(null);
 // Popup state
 const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
+const isAddMemberDialogOpen = ref(false);
+const newMemberEmail = ref("");
 
 // Collections data for recipe popup
 const userCollections = ref([]);
@@ -242,6 +281,58 @@ function handleProfileClick() {
 function handleHomeClick() {
   router.push("/");
 }
+
+function showAddMemberDialog() {
+  isAddMemberDialogOpen.value = true;
+  newMemberEmail.value = "";
+}
+
+function closeAddMemberDialog() {
+  isAddMemberDialogOpen.value = false;
+  newMemberEmail.value = "";
+}
+
+async function handleAddMember() {
+  if (!newMemberEmail.value || !newMemberEmail.value.trim()) {
+    alert("Please enter a valid email address");
+    return;
+  }
+
+  try {
+    const authToken = getToken();
+    await addMemberToCollection(
+      authToken,
+      collectionId.value,
+      newMemberEmail.value.trim()
+    );
+    alert(`Successfully added ${newMemberEmail.value} to the collection!`);
+    closeAddMemberDialog();
+    // Refresh collection to update members list
+    await fetchCollectionDetails();
+  } catch (error) {
+    console.error("Failed to add member:", error);
+    alert(`Failed to add member: ${error.message}`);
+  }
+}
+
+async function handleDeleteCollection() {
+  const confirmed = confirm(
+    `Are you sure you want to delete "${collectionName.value}"? This action cannot be undone.`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    const authToken = getToken();
+    await deleteCollection(authToken, collectionId.value);
+    alert(`Collection "${collectionName.value}" has been deleted.`);
+    // Navigate back to profile page
+    router.push("/profile");
+  } catch (error) {
+    console.error("Failed to delete collection:", error);
+    alert(`Failed to delete collection: ${error.message}`);
+  }
+}
 </script>
 
 <style scoped>
@@ -261,6 +352,9 @@ function handleHomeClick() {
   border-bottom: 2px solid var(--color-primary);
   padding: 1.5rem 2rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .collection-navbar h1 {
@@ -268,6 +362,37 @@ function handleHomeClick() {
   font-size: 1.75rem;
   color: var(--color-primary);
   text-transform: lowercase;
+}
+
+.collection-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-action {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-action:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
 }
 
 /* Recipes Section */
@@ -319,5 +444,94 @@ function handleHomeClick() {
 
 .btn-retry:hover {
   background: var(--color-primary-dark);
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h2 {
+  margin: 0 0 1rem 0;
+  color: var(--color-primary);
+  font-size: 1.5rem;
+}
+
+.modal-content p {
+  margin: 0 0 1rem 0;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.member-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+  box-sizing: border-box;
+}
+
+.member-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.btn-primary {
+  padding: 0.75rem 1.5rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-secondary {
+  padding: 0.75rem 1.5rem;
+  background: #f3f4f6;
+  color: #374151;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
 }
 </style>
