@@ -164,24 +164,24 @@ export async function searchRecipes(query) {
         console.error("Backend returned error:", errorMsg);
         throw new Error(errorMsg);
       }
-      
+
       // Extract recipes from [{ recipes: [...] }]
       // Backend returns recipe IDs, so we need to fetch full recipes
       if (response.data[0].recipes) {
         const recipeIds = response.data[0].recipes;
         console.log("Search returned recipe IDs:", recipeIds);
-        
+
         // Fetch all recipes and filter by IDs
         const allRecipesResponse = await api.post("/_getAllRecipesGlobal");
         const allRecipes = Array.isArray(allRecipesResponse.data)
           ? allRecipesResponse.data.map((item) => item.recipe)
           : [];
-        
+
         // Filter to only include recipes with matching IDs
-        const matchingRecipes = allRecipes.filter(recipe => 
+        const matchingRecipes = allRecipes.filter((recipe) =>
           recipeIds.includes(recipe._id)
         );
-        
+
         console.log("Search results:", matchingRecipes.length, "recipes found");
         return matchingRecipes;
       }

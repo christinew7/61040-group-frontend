@@ -137,7 +137,10 @@ function handleLogout() {
 }
 
 function handleRecipeSearch() {
-  console.log("Sidebar - handleRecipeSearch called with:", recipeSearchQuery.value);
+  console.log(
+    "Sidebar - handleRecipeSearch called with:",
+    recipeSearchQuery.value
+  );
   emit("recipe-search", recipeSearchQuery.value);
 }
 

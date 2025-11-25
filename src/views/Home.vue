@@ -324,7 +324,7 @@ async function handleRecipeSearch(query) {
 
   // Trim the query
   const trimmedQuery = query.trim();
-  
+
   // Call API to search by title
   console.log("Calling searchRecipes API with:", trimmedQuery);
   isLoading.value = true;
