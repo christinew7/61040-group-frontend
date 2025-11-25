@@ -19,7 +19,6 @@ export async function createRecipe(
   title,
   link = null,
   description = null,
-  image = null
 ) {
   if (typeof token !== "string") throw new TypeError("Token is required.");
   if (typeof title !== "string") throw new TypeError("Title is required.");
@@ -30,7 +29,6 @@ export async function createRecipe(
       title,
       link,
       description,
-      image,
     });
     console.log("API response for createRecipe:", response.data);
     
@@ -130,28 +128,23 @@ export async function viewRecipe(token, ownerId, title) {
 }
 
 /**
- * @route POST api/Recipe/getRecipe
- * @desc Get a specific recipe by ID.
+ * @route POST api/Recipe/_getRecipe (passthrough - public)
+ * @desc Get a recipe without authentication (no collection status)
  */
-export async function getRecipe(token, recipeId) {
-  if (typeof token !== "string" || typeof recipeId !== "string") {
-    throw new TypeError("Token and recipe ID are required.");
+export async function getRecipe(owner, title) {
+  if (typeof owner !== "string" || typeof title !== "string") {
+    throw new TypeError("Owner and title are required.");
   }
 
-  console.log("getRecipe called with:", {
-    token: token.substring(0, 10) + "...",
-    recipeId,
-  });
-
   try {
-    const response = await api.post("/getRecipe", {
-      token,
-      recipe: recipeId,
-    });
-    console.log("getRecipe response:", response.data);
-    return response.data.recipe;
+    const response = await api.post("/_getRecipe", { owner, title });
+    
+    if (response.data.error) {
+      throw new Error(response.data.error);
+    }
+    
+    return response.data; // Just the recipe
   } catch (err) {
-    console.error("getRecipe error:", err.response?.data || err.message);
     throw new Error(err.response?.data?.error || "Failed to get recipe.");
   }
 }
