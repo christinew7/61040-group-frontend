@@ -1,57 +1,39 @@
 <template>
-  <div class="home-layout">
-    <Sidebar
-      :showSearch="true"
-      @add-recipe="handleAddRecipe"
-      @add-collection="handleAddCollection"
-      @recipe-search="handleRecipeSearch"
-      @ingredient-filter-change="handleIngredientFilter"
-      @profile-click="handleProfileClick"
-      @home-click="handleHomeClick"
-      @sign-in="showLogin = true"
-      @logout="handleLogout"
-    />
+  <div class="home-view">
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading-state">Loading recipes...</div>
 
-    <div class="home-view">
-      <h2>Home</h2>
+    <!-- All Recipes Section -->
+    <section v-else class="recipes-section">
+      <h3>All Recipes ({{ filteredRecipes.length }})</h3>
+      <div
+        v-if="filteredRecipes.length === 0 && allRecipes.length === 0"
+        class="empty-state"
+      >
+        No recipes found. Create one to get started!
+      </div>
+      <div v-else-if="filteredRecipes.length === 0" class="empty-state">
+        No recipes match your search criteria.
+      </div>
+      <div v-else class="recipes-grid">
+        <RecipeDisplay
+          v-for="recipe in filteredRecipes"
+          :key="recipe._id"
+          :recipe="recipe"
+          @click="onRecipeClick"
+        />
+      </div>
+    </section>
 
-      <!-- Loading State -->
-      <div v-if="isLoading" class="loading-state">Loading recipes...</div>
-
-      <!-- All Recipes Section -->
-      <section v-else class="recipes-section">
-        <h3>All Recipes ({{ filteredRecipes.length }})</h3>
-        <div
-          v-if="filteredRecipes.length === 0 && allRecipes.length === 0"
-          class="empty-state"
-        >
-          No recipes found. Create one to get started!
-        </div>
-        <div v-else-if="filteredRecipes.length === 0" class="empty-state">
-          No recipes match your search criteria.
-        </div>
-        <div v-else class="recipes-grid">
-          <RecipeDisplay
-            v-for="recipe in filteredRecipes"
-            :key="recipe._id"
-            :recipe="recipe"
-            @click="onRecipeClick"
-          />
-        </div>
-      </section>
-
-      <!-- Debug output -->
-      <section class="debug-section">
-        <h3>Search & Filter State for Debugging</h3>
-        <p><strong>Recipe Search:</strong> {{ searchQuery || "(none)" }}</p>
-        <p>
-          <strong>Ingredient Filters:</strong>
-          {{
-            ingredientFilters.length ? ingredientFilters.join(", ") : "(none)"
-          }}
-        </p>
-      </section>
-    </div>
+    <!-- Debug output -->
+    <section class="debug-section">
+      <h3>Search & Filter State for Debugging</h3>
+      <p><strong>Recipe Search:</strong> {{ searchQuery || "(none)" }}</p>
+      <p>
+        <strong>Ingredient Filters:</strong>
+        {{ ingredientFilters.length ? ingredientFilters.join(", ") : "(none)" }}
+      </p>
+    </section>
 
     <!-- Add Recipe Popup -->
     <AddRecipePopup
@@ -81,9 +63,13 @@
 import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
-import LoginPopup from "../components/LoginPopup.vue";
-import Sidebar from "../components/Sidebar.vue";
+import { useAppSearch } from "../composables/useAppSearch.js";
+import { useHeader } from "../composables/useHeader.js";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
+
+const router = useRouter();
+const { searchQuery, ingredientFilters } = useAppSearch();
+const { setTitle, setBreadcrumbs } = useHeader();
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
@@ -103,10 +89,6 @@ const showLogin = ref(false);
 // Recipes from API
 const allRecipes = ref([]);
 const isLoading = ref(false);
-
-// Search and filter state
-const searchQuery = ref("");
-const ingredientFilters = ref([]);
 
 // Computed filtered recipes
 const filteredRecipes = computed(() => {
@@ -137,6 +119,8 @@ const filteredRecipes = computed(() => {
 });
 
 onMounted(async () => {
+  setTitle("home");
+  setBreadcrumbs([]);
   await init();
   await fetchAllRecipes();
 });
@@ -166,48 +150,6 @@ async function handleLogout() {
 function onLoginSuccess() {
   console.log("Login successful!");
 }
-
-const router = useRouter();
-
-const sampleRecipe = ref({
-  _id: "recipe-123",
-  owner: "user-456",
-  title: "Test Pancakes",
-  ingredients: [
-    { name: "1 cup flour" },
-    { name: "1 egg" },
-    { name: "1 cup milk" },
-  ],
-  image:
-    "https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=800&auto=format&fit=crop",
-  description: "Fluffy homemade pancakes",
-  isCopy: false,
-});
-
-const sampleCollection = ref({
-  _id: "collection-789",
-  owner: "user-456",
-  name: "Breakfast Favorites",
-  members: ["user-456", "user-789"],
-  items: [
-    {
-      _id: "recipe-123",
-      title: "Pancakes",
-      image:
-        "https://images.unsplash.com/photo-1528207776546-365bb710ee93?w=800&auto=format&fit=crop",
-    },
-    {
-      _id: "recipe-456",
-      title: "Waffles",
-      image:
-        "https://images.unsplash.com/photo-1568051243851-f9b136146e97?w=800&auto=format&fit=crop",
-    },
-    {
-      _id: "recipe-789",
-      title: "French Toast",
-    },
-  ],
-});
 
 // Popup state
 const isAddRecipePopupOpen = ref(false);
@@ -367,36 +309,13 @@ function onRecipeClick(recipe) {
     },
   });
 }
-
-function onCollectionClick(collection) {
-  console.log("Collection clicked:", collection);
-  // Navigate to collection detail page
-  router.push({
-    name: "Collection",
-    params: { id: collection._id },
-    query: { name: collection.name },
-  });
-}
 </script>
 
 <style scoped>
-.home-layout {
-  display: flex;
-  min-height: 100vh;
-}
-
 .home-view {
   flex: 1;
   max-width: 1200px;
   padding: 2rem;
-}
-
-.tester {
-  margin-top: 1.5rem;
-}
-
-.tester h3 {
-  margin-bottom: 0.75rem;
 }
 
 .debug-section {

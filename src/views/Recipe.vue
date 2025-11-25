@@ -1,14 +1,5 @@
 <template>
   <div class="recipe-layout">
-    <Sidebar
-      :showSearch="false"
-      @add-recipe="handleAddRecipe"
-      @add-collection="handleAddCollection"
-      @profile-click="handleProfileClick"
-      @home-click="handleHomeClick"
-      @logout="handleLogout"
-    />
-
     <!-- Main Content -->
     <div class="recipe-content">
       <!-- Top Navbar -->
@@ -80,22 +71,22 @@
           <p v-else class="empty-state">No ingredients listed yet.</p>
         </section>
       </div>
+
+      <!-- Add Recipe Popup -->
+      <AddRecipePopup
+        :isOpen="isAddRecipePopupOpen"
+        :collections="userCollections"
+        @close="closeAddRecipePopup"
+        @submit="handleRecipeSubmit"
+      />
+
+      <!-- Add Collection Popup -->
+      <AddCollectionPopup
+        :isOpen="isAddCollectionPopupOpen"
+        @close="closeAddCollectionPopup"
+        @submit="handleCollectionSubmit"
+      />
     </div>
-
-    <!-- Add Recipe Popup -->
-    <AddRecipePopup
-      :isOpen="isAddRecipePopupOpen"
-      :collections="userCollections"
-      @close="closeAddRecipePopup"
-      @submit="handleRecipeSubmit"
-    />
-
-    <!-- Add Collection Popup -->
-    <AddCollectionPopup
-      :isOpen="isAddCollectionPopupOpen"
-      @close="closeAddCollectionPopup"
-      @submit="handleCollectionSubmit"
-    />
   </div>
 </template>
 
@@ -114,10 +105,12 @@ import {
 } from "../api/Recipe.js";
 import { getMyCollections, addItemToCollection } from "../api/Collecting.js";
 import { useAuth } from "../composables/useAuth.js";
+import { useHeader } from "../composables/useHeader.js";
 
 const router = useRouter();
 const route = useRoute();
 const { token, isLoggedIn, logout } = useAuth();
+const { setTitle, setBreadcrumbs } = useHeader();
 
 // Recipe data
 const recipe = ref({
@@ -131,19 +124,11 @@ const recipe = ref({
 const isLoading = ref(false);
 const error = ref(null);
 
-// Popup state
-const isAddRecipePopupOpen = ref(false);
-const isAddCollectionPopupOpen = ref(false);
-
-// Collections data for recipe popup
-const userCollections = ref([]);
-
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
 // Fetch recipe details on mount
 onMounted(async () => {
   await fetchRecipeDetails();
-  await fetchCollections();
 });
 
 async function fetchCollections() {
@@ -203,6 +188,42 @@ async function fetchRecipeDetails() {
     }
 
     recipe.value = Array.isArray(recipes) ? recipes[0] : recipes;
+
+    setTitle("recipe");
+
+    // Determine breadcrumbs based on context
+    const from = route.query.from;
+    let breadcrumbs = [];
+
+    if (from === "profile") {
+      breadcrumbs = [
+        { label: "My Profile", route: "/profile" },
+        { label: recipe.value.title },
+      ];
+    } else if (from === "collection") {
+      const collectionId = route.query.collectionId;
+      const collectionName = route.query.collectionName || "Collection";
+      breadcrumbs = [
+        { label: "My Profile", route: "/profile" },
+        {
+          label: collectionName,
+          route: {
+            name: "Collection",
+            params: { id: collectionId },
+            query: { name: collectionName },
+          },
+        },
+        { label: recipe.value.title },
+      ];
+    } else {
+      // Default to Home
+      breadcrumbs = [
+        { label: "Home", route: "/" },
+        { label: recipe.value.title },
+      ];
+    }
+
+    setBreadcrumbs(breadcrumbs);
 
     console.log("Recipe loaded:", recipe.value);
     console.log("Recipe image:", recipe.value?.image);
@@ -310,12 +331,6 @@ function handleLogout() {
 </script>
 
 <style scoped>
-.recipe-layout {
-  display: flex;
-  min-height: 100vh;
-  align-items: stretch;
-}
-
 .recipe-content {
   flex: 1;
   background: #f9fafb;

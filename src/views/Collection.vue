@@ -1,14 +1,5 @@
 <template>
   <div class="collection-layout">
-    <Sidebar
-      :showSearch="false"
-      @add-recipe="handleAddRecipe"
-      @add-collection="handleAddCollection"
-      @profile-click="handleProfileClick"
-      @home-click="handleHomeClick"
-      @logout="handleLogout"
-    />
-
     <!-- Main Content -->
     <div class="collection-content">
       <!-- Top Navbar with Collection Name -->
@@ -137,8 +128,6 @@ import { ref, onMounted, computed } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
-import AddRecipePopup from "../components/AddRecipePopup.vue";
-import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import {
   viewCollection,
   getMyCollections,
@@ -154,10 +143,12 @@ import {
 } from "../api/Recipe.js";
 import { getProfileByUserId } from "../api/User.js";
 import { useAuth } from "../composables/useAuth.js";
+import { useHeader } from "../composables/useHeader.js";
 
 const router = useRouter();
 const route = useRoute();
 const { token, logout, user, init } = useAuth();
+const { setTitle, setBreadcrumbs } = useHeader();
 
 // Collection data
 const collectionId = ref(route.params.id);
@@ -194,18 +185,7 @@ onMounted(async () => {
   await init();
 
   await fetchCollectionDetails();
-  await fetchCollections();
 });
-
-async function fetchCollections() {
-  try {
-    const authToken = getToken();
-    const response = await getMyCollections(authToken);
-    userCollections.value = response;
-  } catch (error) {
-    console.error("Failed to fetch collections:", error);
-  }
-}
 
 async function fetchCollectionDetails() {
   isLoading.value = true;
@@ -305,6 +285,12 @@ async function fetchCollectionDetails() {
 
     // Get collection name from route query or use a default
     collectionName.value = route.query.name || "Collection";
+
+    setTitle(collectionName.value);
+    setBreadcrumbs([
+      { label: "My Profile", route: "/profile" },
+      { label: collectionName.value },
+    ]);
     collectionOwner.value = route.query.owner || "";
 
     console.log("Collection owner:", collectionOwner.value);
@@ -326,90 +312,14 @@ function onRecipeClick(recipe) {
   router.push({
     name: "Recipe",
     params: { id: recipe._id },
-    query: { recipe: encodeURIComponent(JSON.stringify(recipe)) },
+    query: {
+      owner: recipe.owner,
+      title: recipe.title,
+      from: "collection",
+      collectionId: collectionId.value,
+      collectionName: collectionName.value,
+    },
   });
-}
-
-function handleAddRecipe() {
-  console.log("Add recipe clicked");
-  isAddRecipePopupOpen.value = true;
-}
-
-function closeAddRecipePopup() {
-  isAddRecipePopupOpen.value = false;
-}
-
-async function handleRecipeSubmit(recipeData) {
-  try {
-    const authToken = getToken();
-
-    // Create the recipe - returns the recipe ID
-    const recipeId = await createRecipe(
-      authToken,
-      recipeData.name,
-      recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
-      recipeData.image?.trim() || undefined
-    );
-    console.log("Recipe created with ID:", recipeId);
-
-    // Add ingredients if provided
-    if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
-      try {
-        const ingredients = await parseIngredients(
-          authToken,
-          recipeId,
-          recipeData.ingredientsText
-        );
-        console.log("Ingredients added:", ingredients);
-      } catch (error) {
-        console.error("Failed to add ingredients:", error);
-      }
-    }
-
-    // Add the recipe to the selected collection if one was chosen
-    if (recipeData.collection && recipeId) {
-      try {
-        await addItemToCollection(authToken, recipeData.collection, recipeId);
-        console.log(`Added recipe to collection: ${recipeData.collection}`);
-      } catch (error) {
-        console.error("Failed to add recipe to collection:", error);
-      }
-    }
-
-    alert(`Recipe "${recipeData.name}" created successfully!`);
-
-    // Refresh collection to show new recipe if it was added to this collection
-    if (recipeData.collection === collectionId.value) {
-      await fetchCollectionDetails();
-    }
-  } catch (error) {
-    console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
-  }
-}
-
-function handleAddCollection() {
-  console.log("Add collection clicked");
-  isAddCollectionPopupOpen.value = true;
-}
-
-function closeAddCollectionPopup() {
-  isAddCollectionPopupOpen.value = false;
-}
-
-function handleCollectionSubmit(collectionData) {
-  console.log("Collection submitted:", collectionData);
-  // Here you would typically send the data to your backend API
-  alert(`Collection "${collectionData.name}" created successfully!`);
-}
-
-function handleProfileClick() {
-  router.push("/profile");
-}
-
-function handleHomeClick() {
-  router.push("/");
 }
 
 function showAddMemberDialog() {
@@ -510,12 +420,16 @@ function getMemberUserId(member) {
 <style scoped>
 .collection-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 .collection-content {
   flex: 1;
   background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
 /* Top Navbar */

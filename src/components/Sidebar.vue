@@ -6,14 +6,21 @@
         <h1>cooked!</h1>
       </div>
 
+      <!-- Navigation Links -->
+      <div class="profile-section">
+        <div class="profile-label" @click="handleHomeClick">Home</div>
+        <div
+          v-if="isLoggedIn"
+          class="profile-label"
+          @click="handleProfileClick"
+        >
+          My Profile
+        </div>
+      </div>
+
       <!-- Auth Section -->
       <div v-if="!isLoggedIn" class="auth-section">
         <button @click="handleSignIn" class="signin-button">Sign In</button>
-      </div>
-
-      <!-- My Profile Section (logged in only) -->
-      <div v-else class="profile-section">
-        <div class="profile-label" @click="handleProfileClick">My Profile</div>
       </div>
 
       <!-- Action Buttons (always visible) -->

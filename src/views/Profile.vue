@@ -1,14 +1,5 @@
 <template>
   <div class="profile-layout">
-    <Sidebar
-      :showSearch="false"
-      @add-recipe="handleAddRecipe"
-      @add-collection="handleAddCollection"
-      @profile-click="handleProfileClick"
-      @home-click="handleHomeClick"
-      @logout="handleLogout"
-    />
-
     <!-- Main Content -->
     <div class="profile-content">
       <!-- Top Navbar -->
@@ -115,34 +106,18 @@
           </p>
         </div>
       </section>
+
+      <!-- Delete Account Confirmation Popup -->
+      <ConfirmationPopup
+        :isOpen="isDeleteConfirmOpen"
+        title="Delete Account"
+        message="Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed."
+        confirmText="Delete Account"
+        cancelText="Cancel"
+        @confirm="confirmDeleteAccount"
+        @close="closeDeleteConfirm"
+      />
     </div>
-
-    <!-- Add Recipe Popup -->
-    <AddRecipePopup
-      :isOpen="isAddRecipePopupOpen"
-      :collections="userCollections"
-      @close="closeAddRecipePopup"
-      @submit="handleRecipeSubmit"
-    />
-
-    <!-- Add Collection Popup -->
-    <AddCollectionPopup
-      :isOpen="isAddCollectionPopupOpen"
-      :recipes="userRecipes"
-      @close="closeAddCollectionPopup"
-      @submit="handleCollectionSubmit"
-    />
-
-    <!-- Delete Account Confirmation Popup -->
-    <ConfirmationPopup
-      :isOpen="isDeleteConfirmOpen"
-      title="Delete Account"
-      message="Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed."
-      confirmText="Delete Account"
-      cancelText="Cancel"
-      @confirm="confirmDeleteAccount"
-      @close="closeDeleteConfirm"
-    />
   </div>
 </template>
 
@@ -150,11 +125,11 @@
 import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
+import { useHeader } from "../composables/useHeader.js";
 import Sidebar from "../components/Sidebar.vue";
 import CollectionDisplay from "../components/CollectionDisplay.vue";
-import AddRecipePopup from "../components/AddRecipePopup.vue";
-import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import ConfirmationPopup from "../components/ConfirmationPopup.vue";
+import RecipeDisplay from "../components/RecipeDisplay.vue";
 import {
   getMyCollections,
   createCollection,
@@ -168,10 +143,10 @@ import {
   setImage,
 } from "../api/Recipe.js";
 import { getProfile, updateDisplayName, deleteAccount } from "../api/User.js";
-import RecipeDisplay from "../components/RecipeDisplay.vue";
 
 const router = useRouter();
 const { token, user, logout } = useAuth();
+const { setTitle, setBreadcrumbs } = useHeader();
 
 // for display name
 const isSaving = ref(false);
@@ -179,8 +154,6 @@ const saveSuccess = ref(false);
 const saveError = ref(null);
 
 // Popup state
-const isAddRecipePopupOpen = ref(false);
-const isAddCollectionPopupOpen = ref(false);
 const isDeleteConfirmOpen = ref(false);
 
 // User account data
@@ -199,6 +172,8 @@ const isLoadingRecipes = ref(false);
 const recipesError = ref(null);
 
 onMounted(async () => {
+  setTitle("my profile");
+  setBreadcrumbs([]);
   // Fetch fresh profile data from API
   try {
     const authToken = getToken();
@@ -345,6 +320,7 @@ function onRecipeClick(recipe) {
     query: {
       owner: recipe.owner,
       title: recipe.title,
+      from: "profile",
     },
   });
 }
@@ -529,29 +505,16 @@ function handleHomeClick() {
 </script>
 
 <style scoped>
-.profile-layout {
-  display: flex;
-  min-height: 100vh;
+.profile-content {
+  flex: 1;
+  background: #f9fafb;
+  /* Ensure it takes full height */
+  min-height: 100%;
 }
 
 .profile-content {
   flex: 1;
   background: #f9fafb;
-}
-
-/* Top Navbar */
-.profile-navbar {
-  background: white;
-  border-bottom: 2px solid var(--color-primary);
-  padding: 1.5rem 2rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-}
-
-.profile-navbar h1 {
-  margin: 0;
-  font-size: 1.75rem;
-  color: var(--color-primary);
-  text-transform: lowercase;
 }
 
 /* Account Section */
