@@ -37,6 +37,32 @@
                 🔗 View Original Recipe
               </a>
             </div>
+
+            <!-- Recipe Actions (logged in only) -->
+            <div v-if="isLoggedIn" class="recipe-actions">
+              <!-- Owner-only actions -->
+              <template v-if="isOwner">
+                <button @click="handleEditRecipe" class="btn-action btn-edit">
+                  Edit
+                </button>
+                <button @click="handleDeleteRecipe" class="btn-action btn-delete">
+                  Delete
+                </button>
+              </template>
+              
+              
+              <!-- Non-owner actions only -->
+              <template v-if="!isOwner">
+                <button @click="handleCopyRecipe" class="btn-action btn-copy">
+                  Copy Recipe
+                </button>
+              </template>
+
+              <!-- Actions for all logged-in users -->
+              <button @click="handleAddToCollection" class="btn-action btn-collection">
+                Add to Collection
+              </button>
+            </div>
           </div>
         </div>
 
@@ -86,12 +112,86 @@
         @close="closeAddCollectionPopup"
         @submit="handleCollectionSubmit"
       />
+      
+      <!-- Add to Collection Modal -->
+      <div v-if="showCollectionModal" class="modal-overlay" @click.self="closeCollectionModal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Add to Collection</h3>
+            <button @click="closeCollectionModal" class="close-button">&times;</button>
+          </div>
+          
+          <div class="modal-body">
+            <div v-if="collectionsWithStatus.length === 0" class="empty-state">
+              You don't have any collections yet. Create one first!
+            </div>
+            
+            <div v-else class="collection-list">
+              <label 
+                v-for="collection in collectionsWithStatus" 
+                :key="collection._id"
+                class="collection-checkbox"
+              >
+                <input 
+                  type="checkbox" 
+                  :checked="collection.hasItem"
+                  @change="toggleCollection(collection)"
+                />
+                <span>{{ collection.name }}</span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button @click="closeCollectionModal" class="btn-done">Done</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Delete Confirmation Modal -->
+      <div v-if="showDeleteModal" class="modal-overlay" @click.self="cancelDelete">
+        <div class="modal-content delete-modal">
+          <div class="modal-header">
+            <h3>Delete Recipe</h3>
+            <button @click="cancelDelete" class="close-button">&times;</button>
+          </div>
+          
+          <div class="modal-body">
+            <p class="delete-warning">
+              Are you sure you want to delete "<strong>{{ recipe.title }}</strong>"?
+            </p>
+            <p class="delete-subtext">This action cannot be undone.</p>
+          </div>
+          
+          <div class="modal-footer delete-footer">
+            <button @click="cancelDelete" class="btn-cancel">Cancel</button>
+            <button 
+              @click="confirmDelete" 
+              class="btn-confirm-delete"
+              :disabled="isDeleting"
+            >
+              {{ isDeleting ? 'Deleting...' : 'Delete Recipe' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Success Message -->
+      <div v-if="showSuccessMessage" class="message success-message">
+        ✓ {{ successMessage }}
+      </div>
+
+      <!-- Error Message -->
+      <div v-if="showErrorMessage" class="message error-message">
+        ✗ {{ errorMessage }}
+      </div>
+
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { computed, ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import Navbar from "../components/Navbar.vue";
@@ -102,14 +202,17 @@ import {
   createRecipe,
   parseIngredients,
   setImage,
+  deleteRecipe,
+  copyRecipe,
+  viewRecipe,
 } from "../api/Recipe.js";
-import { getMyCollections, addItemToCollection } from "../api/Collecting.js";
+import { getMyCollections, addItemToCollection, removeItemFromCollection } from "../api/Collecting.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useHeader } from "../composables/useHeader.js";
 
 const router = useRouter();
 const route = useRoute();
-const { token, isLoggedIn, logout } = useAuth();
+const { token, isLoggedIn, user, logout } = useAuth();
 const { setTitle, setBreadcrumbs } = useHeader();
 
 // Recipe data
@@ -123,6 +226,25 @@ const recipe = ref({
 });
 const isLoading = ref(false);
 const error = ref(null);
+
+// Is current user the owner?
+const isOwner = computed(() => {
+  return user.value?.userId === recipe.value?.owner;
+});
+
+// Collection modal state
+const showCollectionModal = ref(false);
+const collectionsWithStatus = ref([]);
+const isLoadingCollections = ref(false);
+
+//Delete modal state 
+const showDeleteModal = ref(false);
+const isDeleting = ref(false);
+
+const showSuccessMessage = ref(false);
+const successMessage = ref("");
+const showErrorMessage = ref(false);
+const errorMessage = ref("");
 
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
@@ -140,6 +262,24 @@ async function fetchCollections() {
   } catch (error) {
     console.error("Failed to fetch collections:", error);
   }
+}
+
+function showSuccess(message) {
+  successMessage.value = message;
+  showSuccessMessage.value = true;
+  
+  setTimeout(() => {
+    showSuccessMessage.value = false;
+  }, 3000);
+}
+
+function showError(message) {
+  errorMessage.value = message;
+  showErrorMessage.value = true;
+  
+  setTimeout(() => {
+    showErrorMessage.value = false;
+  }, 5000);
 }
 
 async function fetchRecipeDetails() {
@@ -234,6 +374,94 @@ async function fetchRecipeDetails() {
   } finally {
     isLoading.value = false;
   }
+}
+
+// --- DELETE RECIPE (owner only) ---
+function handleDeleteRecipe() {
+  showDeleteModal.value = true;  
+}
+
+async function confirmDelete() {
+  isDeleting.value = true;
+  
+  try {
+    await deleteRecipe(token.value, recipe.value._id);
+    showDeleteModal.value = false;
+    showSuccess("Recipe deleted!");
+    
+    setTimeout(() => {
+      router.push("/profile");
+    }, 1500);
+  } catch (err) {
+    console.error("Failed to delete recipe:", err);
+    showError(`Failed to delete: ${err.message}`);
+    showDeleteModal.value = false;
+  } finally {
+    isDeleting.value = false;
+  }
+}
+
+function cancelDelete() {
+  showDeleteModal.value = false;
+}
+
+// --- COPY RECIPE (all logged-in users) ---
+async function handleCopyRecipe() {
+  try {
+    const newRecipeId = await copyRecipe(token.value, recipe.value._id);
+    showSuccess("Recipe copied to your recipes!");
+    
+    setTimeout(() => {
+      router.push("/profile");
+    }, 1500);
+  } catch (err) {
+    console.error("Failed to copy recipe:", err);
+    showError(`Failed to copy: ${err.message}`);
+  }
+}
+
+// --- EDIT RECIPE (owner only) ---
+function handleEditRecipe() {
+  // TODO: Open edit modal or navigate to edit page
+  alert("Edit recipe coming soon!");
+}
+
+// --- ADD TO COLLECTION (all logged-in users) ---
+async function handleAddToCollection() {
+  isLoadingCollections.value = true;
+  
+  try {
+    const data = await viewRecipe(token.value, recipe.value.owner, recipe.value.title);
+    collectionsWithStatus.value = data.collectionsWithStatus || [];
+    showCollectionModal.value = true;
+  } catch (err) {
+    console.error("Failed to load collections:", err);
+    alert(`Failed to load collections: ${err.message}`);
+  } finally {
+    isLoadingCollections.value = false;
+  }
+}
+
+// Toggle recipe in/out of collection
+async function toggleCollection(collection) {
+  try {
+    if (collection.hasItem) {
+      await removeItemFromCollection(token.value, collection._id, recipe.value._id);
+      collection.hasItem = false;
+      showSuccess(`Removed from "${collection.name}"`);
+    } else {
+      await addItemToCollection(token.value, collection._id, recipe.value._id);
+      collection.hasItem = true;
+      showSuccess(`Added to "${collection.name}"`);
+    }
+  } catch (err) {
+    console.error("Failed to update collection:", err);
+    showError(`Failed to update: ${err.message}`);
+  }
+}
+
+function closeCollectionModal() {
+  showCollectionModal.value = false;
 }
 
 function handleAddRecipe() {
@@ -497,5 +725,249 @@ function handleLogout() {
   color: #6b7280;
   font-size: 1rem;
   padding: 2rem 0;
+}
+
+/* Recipe Actions */
+.recipe-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-action {
+  padding: 0.625rem 1.25rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-edit {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+.btn-edit:hover {
+  background: #bfdbfe;
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.btn-delete:hover {
+  background: #fecaca;
+}
+
+.btn-copy {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+.btn-copy:hover {
+  background: #e9d5ff;
+}
+
+.btn-collection {
+  background: #d1fae5;
+  color: #059669;
+}
+.btn-collection:hover {
+  background: #a7f3d0;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--color-primary);
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.modal-body {
+  padding: 1.5rem;
+  overflow-y: auto;
+}
+
+.collection-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.collection-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.collection-checkbox:hover {
+  background: #f3f4f6;
+}
+
+.collection-checkbox input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+}
+
+.modal-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-done {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-done:hover {
+  background: var(--color-primary-dark);
+}
+
+
+.delete-modal {
+  max-width: 400px;
+}
+
+.delete-warning {
+  font-size: 1.1rem;
+  color: var(--color-text-dark, #0f172a);
+  margin: 0 0 0.5rem 0;
+}
+
+.delete-subtext {
+  color: #6b7280;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.delete-footer {
+  display: flex;
+  gap: 1rem;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 0.75rem;
+  background: #f3f4f6;
+  color: var(--color-text-dark, #0f172a);
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
+}
+
+.btn-confirm-delete {
+  flex: 1;
+  padding: 0.75rem;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-confirm-delete:hover {
+  background: #b91c1c;
+}
+
+.btn-confirm-delete:disabled {
+  background: #f87171;
+  cursor: not-allowed;
+}
+
+/* Short term success message */
+
+.message {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+  z-index: 1000;
+}
+
+.success-message {
+  background: #059669;
+  color: white;
+}
+
+.error-message {
+  background: #dc2626;
+  color: white;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>
