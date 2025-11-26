@@ -21,6 +21,19 @@
     </div>
 
     <div class="header-right">
+      <!-- Header Actions -->
+      <div v-if="headerActions.length > 0" class="header-actions">
+        <button
+          v-for="(action, index) in headerActions"
+          :key="index"
+          @click="action.onClick"
+          :class="['btn-header-action', action.variant ? `btn-${action.variant}` : '']"
+          :title="action.title"
+        >
+          {{ action.label }}
+        </button>
+      </div>
+
       <DropdownMenu v-if="isLoggedIn">
         <template #trigger>
           <div class="user-info">
@@ -64,7 +77,7 @@ import { useAuth } from '../composables/useAuth.js';
 import DropdownMenu from './DropdownMenu.vue';
 
 const router = useRouter();
-const { title, breadcrumbs } = useHeader();
+const { title, breadcrumbs, headerActions } = useHeader();
 const { isLoggedIn, user, logout } = useAuth();
 
 const displayName = computed(() => {
@@ -148,6 +161,47 @@ defineEmits(['sign-in']);
 .header-right {
   display: flex;
   align-items: center;
+  gap: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.btn-header-action {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-header-action:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background: #e5e7eb;
+}
+
+.btn-danger {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.btn-danger:hover {
+  background: #fecaca;
 }
 
 .user-info {

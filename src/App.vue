@@ -16,7 +16,7 @@
 
       <!-- Main Content Area -->
       <div class="main-content">
-        <Header v-if="shouldShowHeader" @sign-in="showLogin = true" />
+        <Header @sign-in="showLogin = true" />
         <router-view />
       </div>
     </div>
@@ -27,6 +27,7 @@
       :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
+      @submitParsed="handleParsedRecipeSubmit"
     />
 
     <AddCollectionPopup
@@ -82,11 +83,6 @@ const userRecipes = ref([]);
 
 // Show search only on Home page
 const shouldShowSearch = computed(() => route.name === "Home");
-
-// Hide header on pages that have their own navbar
-const shouldShowHeader = computed(() => {
-  return !["Collection", "Recipe", "Profile"].includes(route.name);
-});
 
 onMounted(async () => {
   await init();
@@ -177,14 +173,14 @@ async function handleRecipeSubmit(recipeData) {
       authToken,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
-      recipeData.image?.trim() || undefined
+      recipeData.description?.trim() || undefined
     );
 
-    // Set image if provided
+    // Set image separately if provided
     if (recipeData.image?.trim()) {
       try {
         await setImage(authToken, recipeId, recipeData.image);
+        console.log("Image set successfully");
       } catch (error) {
         console.error("Failed to set image:", error);
       }
@@ -209,11 +205,62 @@ async function handleRecipeSubmit(recipeData) {
 
     alert(`Recipe "${recipeData.name}" created successfully!`);
 
+    // Refresh recipes and collections
+    await fetchRecipes();
+    await fetchCollections();
+
+    // Force refresh the current view if on profile page
+    if (route.name === "Profile") {
+      router.go(0); // Reload the current route
+    }
+
     // If on a collection or home page, we might want to refresh the view
     // For now, just navigating to the new recipe or staying put is fine
   } catch (error) {
     console.error("Failed to create recipe:", error);
     alert(`Failed to create recipe: ${error.message}`);
+  }
+}
+
+async function handleParsedRecipeSubmit(submissionData) {
+  try {
+    const authToken = getToken();
+    const { parsedRecipeId, image, collection } = submissionData;
+
+    // Set image if provided
+    if (image?.trim()) {
+      try {
+        await setImage(authToken, parsedRecipeId, image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (collection && parsedRecipeId) {
+      try {
+        await addItemToCollection(authToken, collection, parsedRecipeId);
+        await fetchCollections();
+        console.log(`Added recipe to collection: ${collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert("Recipe created successfully from link!");
+
+    // Refresh recipes and collections
+    await fetchRecipes();
+    await fetchCollections();
+
+    // Force refresh the current view if on profile page
+    if (route.name === "Profile") {
+      router.go(0); // Reload the current route
+    }
+  } catch (error) {
+    console.error("Failed to update parsed recipe:", error);
+    alert(`Failed to update recipe: ${error.message}`);
   }
 }
 

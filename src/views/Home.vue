@@ -25,7 +25,7 @@
       </div>
     </section>
 
-    <!-- Debug output -->
+    <!-- Debug output
     <section class="debug-section">
       <h3>Search & Filter State for Debugging</h3>
       <p><strong>Recipe Search:</strong> {{ searchQuery || "(none)" }}</p>
@@ -33,7 +33,7 @@
         <strong>Ingredient Filters:</strong>
         {{ ingredientFilters.length ? ingredientFilters.join(", ") : "(none)" }}
       </p>
-    </section>
+    </section> -->
 
     <!-- Add Recipe Popup -->
     <AddRecipePopup
@@ -41,6 +41,7 @@
       :collections="userCollections"
       @close="closeAddRecipePopup"
       @submit="handleRecipeSubmit"
+      @submitParsed="handleParsedRecipeSubmit"
     />
 
     <!-- Add Collection Popup -->
@@ -69,7 +70,7 @@ import RecipeDisplay from "../components/RecipeDisplay.vue";
 
 const router = useRouter();
 const { searchQuery, ingredientFilters } = useAppSearch();
-const { setTitle, setBreadcrumbs } = useHeader();
+const { setTitle, setBreadcrumbs, setActions } = useHeader();
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
@@ -82,6 +83,7 @@ import {
   searchRecipes,
 } from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
+import LoginPopup from "../components/LoginPopup.vue";
 
 const { token, isLoggedIn, logout, init } = useAuth();
 const showLogin = ref(false);
@@ -121,6 +123,7 @@ const filteredRecipes = computed(() => {
 onMounted(async () => {
   setTitle("home");
   setBreadcrumbs([]);
+  setActions([]);
   await init();
   await fetchAllRecipes();
 });
@@ -238,6 +241,45 @@ async function handleRecipeSubmit(recipeData) {
   }
 }
 
+async function handleParsedRecipeSubmit(submissionData) {
+  if (!token.value) {
+    alert("Please sign in to create a recipe");
+    return;
+  }
+
+  try {
+    const { parsedRecipeId, image, collection } = submissionData;
+
+    // Set image if provided
+    if (image?.trim()) {
+      try {
+        await setImage(token.value, parsedRecipeId, image);
+        console.log("Image set successfully");
+      } catch (error) {
+        console.error("Failed to set image:", error);
+      }
+    }
+
+    // Add to collection if selected
+    if (collection && parsedRecipeId) {
+      try {
+        await addItemToCollection(token.value, collection, parsedRecipeId);
+        console.log(`Added recipe to collection: ${collection}`);
+      } catch (error) {
+        console.error("Failed to add recipe to collection:", error);
+      }
+    }
+
+    alert("Recipe created successfully from link!");
+
+    // Refresh recipes list
+    await fetchAllRecipes();
+  } catch (error) {
+    console.error("Failed to update parsed recipe:", error);
+    alert(`Failed to update recipe: ${error.message}`);
+  }
+}
+
 function handleAddCollection() {
   console.log("Add collection clicked");
   isAddCollectionPopupOpen.value = true;
@@ -306,6 +348,7 @@ function onRecipeClick(recipe) {
     query: {
       owner: recipe.owner,
       title: recipe.title,
+      recipe: JSON.stringify(recipe),
     },
   });
 }
