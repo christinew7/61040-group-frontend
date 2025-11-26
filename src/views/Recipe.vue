@@ -366,10 +366,7 @@ const editForm = ref({
   ingredientsText: "",
 });
 
-// Popup state 
-const isAddRecipePopupOpen = ref(false);
-const isAddCollectionPopupOpen = ref(false);
-const userCollections = ref([]);
+
 
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
@@ -637,6 +634,17 @@ async function submitEdit() {
       }
     }
     
+    // Clear the cached recipe from query params so we fetch fresh
+    if (route.query.recipe) {
+      router.replace({
+        ...route,
+        query: {
+          ...route.query,
+          recipe: undefined
+        }
+      });
+    }
+
     // Refresh recipe data
     await fetchRecipeDetails();
     
