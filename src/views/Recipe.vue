@@ -176,6 +176,88 @@
         </div>
       </div>
 
+      <!-- Edit Recipe Modal -->
+      <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
+        <div class="modal-content edit-modal">
+          <div class="modal-header">
+            <h3>Edit Recipe</h3>
+            <button @click="closeEditModal" class="close-button">&times;</button>
+          </div>
+          
+          <div class="modal-body">
+            <div class="form-group">
+              <label for="edit-title">Title</label>
+              <input 
+                id="edit-title" 
+                type="text" 
+                :value="recipe.title" 
+                disabled 
+                class="form-input disabled"
+              />
+              <span class="helper-text">Title cannot be changed</span>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-description">Description</label>
+              <textarea 
+                id="edit-description" 
+                v-model="editForm.description" 
+                class="form-input"
+                rows="3"
+                placeholder="Add a description..."
+              ></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-link">Recipe Link</label>
+              <input 
+                id="edit-link" 
+                type="url" 
+                v-model="editForm.link" 
+                class="form-input"
+                placeholder="https://..."
+              />
+            </div>
+            
+            <div class="form-group">
+              <label for="edit-image">Image URL</label>
+              <input 
+                id="edit-image" 
+                type="url" 
+                v-model="editForm.image" 
+                class="form-input"
+                placeholder="https://..."
+              />
+              <div v-if="editForm.image" class="image-preview">
+                <img :src="editForm.image" alt="Preview" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="edit-ingredients">Ingredients</label>
+              <textarea 
+                id="edit-ingredients" 
+                v-model="editForm.ingredientsText" 
+                class="form-input"
+                rows="6"
+                placeholder="One ingredient per line:
+            1, cup, flour
+            2,, eggs
+            1, tsp, vanilla"
+              ></textarea>
+              <span class="helper-text">Format: quantity, unit, name (one per line)</span>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button @click="closeEditModal" class="btn-cancel">Cancel</button>
+            <button @click="submitEdit" class="btn-save" :disabled="isSaving">
+              {{ isSaving ? 'Saving...' : 'Save Changes' }}
+            </button>
+          </div>
+        </div>
+      </div>
+
       <!-- Success Message -->
       <div v-if="showSuccessMessage" class="message success-message">
         ✓ {{ successMessage }}
@@ -199,12 +281,17 @@ import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import {
   getRecipe,
-  createRecipe,
-  parseIngredients,
-  setImage,
   deleteRecipe,
   copyRecipe,
   viewRecipe,
+  setImage,
+  setDescription,
+  setLink,
+  removeLink,
+  deleteImage,
+  parseIngredients,
+  deleteIngredient,
+  removeDescription,
 } from "../api/Recipe.js";
 import { getMyCollections, addItemToCollection, removeItemFromCollection } from "../api/Collecting.js";
 import { useAuth } from "../composables/useAuth.js";
@@ -245,6 +332,21 @@ const showSuccessMessage = ref(false);
 const successMessage = ref("");
 const showErrorMessage = ref(false);
 const errorMessage = ref("");
+
+//Edit modal state
+const showEditModal = ref(false);
+const isSaving = ref(false);
+const editForm = ref({
+  description: "",
+  link: "",
+  image: "",
+  ingredientsText: "",
+});
+
+// Popup state 
+const isAddRecipePopupOpen = ref(false);
+const isAddCollectionPopupOpen = ref(false);
+const userCollections = ref([]);
 
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 
@@ -291,9 +393,6 @@ async function fetchRecipeDetails() {
     if (route.query.recipe) {
       try {
         recipe.value = JSON.parse(decodeURIComponent(route.query.recipe));
-        console.log("Recipe loaded from query params:", recipe.value);
-        console.log("Recipe image:", recipe.value?.image);
-        console.log("Recipe ingredients:", recipe.value?.ingredients);
         isLoading.value = false;
         return;
       } catch (parseErr) {
@@ -312,11 +411,8 @@ async function fetchRecipeDetails() {
       );
     }
 
-    console.log("Fetching recipe:", { owner, title });
-
     // Use public getRecipe (no auth needed)
     const data = await getRecipe(owner, title);
-    console.log("Raw API response:", data);
 
     // Extract recipe from response
     let recipes = data;
@@ -365,9 +461,6 @@ async function fetchRecipeDetails() {
 
     setBreadcrumbs(breadcrumbs);
 
-    console.log("Recipe loaded:", recipe.value);
-    console.log("Recipe image:", recipe.value?.image);
-    console.log("Recipe ingredients:", recipe.value?.ingredients);
   } catch (err) {
     console.error("Failed to fetch recipe details:", err);
     error.value = err.message;
@@ -422,8 +515,114 @@ async function handleCopyRecipe() {
 
 // --- EDIT RECIPE (owner only) ---
 function handleEditRecipe() {
-  // TODO: Open edit modal or navigate to edit page
-  alert("Edit recipe coming soon!");
+  // Pre-fill form with current values
+  // Convert ingredients array to text format - ALWAYS include all 3 parts
+  const ingredientsText = (recipe.value.ingredients || [])
+    .map(ing => {
+      const quantity = ing.quantity ?? "";
+      const unit = ing.unit ?? "";
+      const name = ing.name ?? "";
+      return `${quantity}, ${unit}, ${name}`;
+    })
+    .join("\n");
+
+  editForm.value = {
+    description: recipe.value.description || "",
+    link: recipe.value.link || "",
+    image: recipe.value.image || "",
+    ingredientsText: ingredientsText,
+  };
+  showEditModal.value = true;
+}
+
+function closeEditModal() {
+  showEditModal.value = false;
+}
+
+async function submitEdit() {
+  // Validation: must have link OR description
+  if (!editForm.value.link?.trim() && !editForm.value.description?.trim()) {
+    showError("Recipe must have either a link or description");
+    return;
+  }
+
+  isSaving.value = true;
+  
+  try {
+    // Update description if changed
+    const originalDescription = recipe.value.description || "";
+    const newDescription = editForm.value.description?.trim() || "";
+
+    if (newDescription !== originalDescription) {
+      if (newDescription) {
+        await setDescription(token.value, recipe.value._id, newDescription);
+      } else {
+        await removeDescription(token.value, recipe.value._id);
+      }
+    }
+    
+    // Update link if changed
+    if (editForm.value.link !== (recipe.value.link || "")) {
+      if (editForm.value.link) {
+        await setLink(token.value, recipe.value._id, editForm.value.link);
+      } else {
+        await removeLink(token.value, recipe.value._id);
+      }
+    }
+    
+    // Update image if changed
+    if (editForm.value.image !== (recipe.value.image || "")) {
+      if (editForm.value.image) {
+        await setImage(token.value, recipe.value._id, editForm.value.image);
+      } else {
+        await deleteImage(token.value, recipe.value._id);
+      }
+    }
+    
+    // Update ingredients if changed
+    // FIXED: Always use "quantity, unit, name" format even if unit is empty
+    const originalIngredientsText = (recipe.value.ingredients || [])
+      .map(ing => {
+        const quantity = ing.quantity ?? "";
+        const unit = ing.unit ?? "";
+        const name = ing.name ?? "";
+        return `${quantity}, ${unit}, ${name}`;
+      })
+      .join("\n");
+    
+    if (editForm.value.ingredientsText !== originalIngredientsText) {
+      
+      // Delete all existing ingredients first
+      for (const ingredient of (recipe.value.ingredients || [])) {
+        try {
+          await deleteIngredient(token.value, ingredient._id);
+        } catch (err) {
+          console.error("Failed to delete ingredient:", ingredient._id, err.message);
+        }
+      }
+      
+      // Add new ingredients
+      if (editForm.value.ingredientsText.trim()) {
+
+        await parseIngredients(
+          token.value,
+          recipe.value._id,
+          editForm.value.ingredientsText
+        );
+      }
+    }
+    
+    // Refresh recipe data
+    await fetchRecipeDetails();
+    
+    showEditModal.value = false;
+    showSuccess("Recipe updated!");
+  } catch (err) {
+    console.error("Failed to update recipe:", err);
+    showError(`Failed to update: ${err.message}`);
+  } finally {
+    isSaving.value = false;
+  }
 }
 
 // --- ADD TO COLLECTION (all logged-in users) ---
@@ -465,7 +664,6 @@ function closeCollectionModal() {
 }
 
 function handleAddRecipe() {
-  console.log("Add recipe clicked");
   isAddRecipePopupOpen.value = true;
 }
 
@@ -487,13 +685,11 @@ async function handleRecipeSubmit(recipeData) {
       recipeData.link?.trim() || undefined,
       recipeData.description?.trim() || undefined
     );
-    console.log("Recipe created with ID:", recipeId);
 
     // Set image separately if provided
     if (recipeData.image?.trim()) {
       try {
         await setImage(token.value, recipeId, recipeData.image);
-        console.log("Image set successfully");
       } catch (error) {
         console.error("Failed to set image:", error);
       }
@@ -502,12 +698,11 @@ async function handleRecipeSubmit(recipeData) {
     // Add ingredients if provided
     if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
       try {
-        const ingredients = await parseIngredients(
+        await parseIngredients(
           token.value,
           recipeId,
           recipeData.ingredientsText
         );
-        console.log("Ingredients added:", ingredients);
       } catch (error) {
         console.error("Failed to add ingredients:", error);
       }
@@ -517,7 +712,6 @@ async function handleRecipeSubmit(recipeData) {
     if (recipeData.collection && recipeId) {
       try {
         await addItemToCollection(token.value, recipeData.collection, recipeId);
-        console.log(`Added recipe to collection: ${recipeData.collection}`);
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
       }
@@ -531,7 +725,6 @@ async function handleRecipeSubmit(recipeData) {
 }
 
 function handleAddCollection() {
-  console.log("Add collection clicked");
   isAddCollectionPopupOpen.value = true;
 }
 
@@ -540,7 +733,6 @@ function closeAddCollectionPopup() {
 }
 
 function handleCollectionSubmit(collectionData) {
-  console.log("Collection submitted:", collectionData);
   alert(`Collection "${collectionData.name}" created successfully!`);
 }
 
@@ -825,8 +1017,9 @@ function handleLogout() {
 }
 
 .modal-body {
-  padding: 1.5rem;
+  padding: 1.5rem 2rem;
   overflow-y: auto;
+  flex: 1;
 }
 
 .collection-list {
@@ -969,5 +1162,114 @@ function handleLogout() {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
   }
+}
+
+/* Edit Modal*/
+.edit-modal {
+  max-width: 500px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--color-text-dark, #0f172a);
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;  
+}
+
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.form-input.disabled {
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.helper-text {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 0.25rem;
+}
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.image-preview {
+  margin-top: 0.75rem;
+  border-radius: 6px;
+  overflow: hidden;
+  max-height: 150px;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 1rem;
+  padding: 1.25rem 2rem;  
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-save {
+  flex: 1;
+  padding: 0.75rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-save:hover {
+  background: var(--color-primary-dark);
+}
+
+.btn-save:disabled {
+  background: #f3a683;
+  cursor: not-allowed;
+}
+
+.btn-cancel {
+  flex: 1;
+  padding: 0.75rem;
+  background: #f3f4f6;
+  color: var(--color-text-dark, #0f172a);
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-cancel:hover {
+  background: #e5e7eb;
 }
 </style>
