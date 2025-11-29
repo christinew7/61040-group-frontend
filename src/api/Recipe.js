@@ -466,18 +466,37 @@ export async function deleteImage(token, recipeId) {
   }
 }
 
-
 /**
  * @route POST api/Recipe/setRecipePublic
  */
 export async function setRecipePublic(token, recipeId, isPublic) {
-    try {
-      await api.post("/setRecipePublic", { token, recipe: recipeId, isPublic });
-      return true;
-    } catch (err) {
-      throw new Error(err.response?.data?.error || "Failed to set public flag.");
-    }
+  if (typeof token !== "string" || typeof recipeId !== "string") {
+    throw new TypeError("Token and recipe ID are required.");
+  }
+  if (typeof isPublic !== "boolean") {
+    throw new TypeError("isPublic must be a boolean.");
+  }
+
+  try {
+    await api.post("/setRecipePublic", { token, recipe: recipeId, isPublic });
+    return true;
+  } catch (err) {
+    throw new Error(err.response?.data?.error || "Failed to set recipe visibility.");
+  }
 }
+
+
+// /**
+//  * @route POST api/Recipe/setRecipePublic
+//  */
+// export async function setRecipePublic(token, recipeId, isPublic) {
+//     try {
+//       await api.post("/setRecipePublic", { token, recipe: recipeId, isPublic });
+//       return true;
+//     } catch (err) {
+//       throw new Error(err.response?.data?.error || "Failed to set public flag.");
+//     }
+// }
 
 // --- Global Ingredient CRUD ---
 

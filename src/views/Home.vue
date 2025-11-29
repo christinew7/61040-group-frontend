@@ -3,9 +3,9 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-state">Loading recipes...</div>
 
-    <!-- All Recipes Section -->
+    <!-- Public Recipes Section -->
     <section v-else class="recipes-section">
-      <h3>All Recipes ({{ filteredRecipes.length }})</h3>
+      <h3>Public Recipes ({{ filteredRecipes.length }})</h3>
       <div
         v-if="filteredRecipes.length === 0 && allRecipes.length === 0"
         class="empty-state"
