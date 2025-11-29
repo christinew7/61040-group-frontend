@@ -103,15 +103,15 @@ async function handleLogout(close) {
 defineEmits(['sign-in']);
 </script>
 
-<style scoped>
+<style scoped lang="scss">
 .app-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
-  background: white;
-  border-bottom: 2px solid var(--color-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  background: var(--header-background);
+  border-bottom: var(--header-border-bottom);
+  box-shadow: var(--header-shadow);
   z-index: 20;
   position: relative;
 }
@@ -126,28 +126,28 @@ defineEmits(['sign-in']);
   display: flex;
   align-items: center;
   font-size: 0.875rem;
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .crumb-link {
-  color: #6b7280;
+  color: var(--text-muted);
   text-decoration: none;
   transition: color 0.2s;
-}
 
-.crumb-link:hover {
-  color: var(--color-primary);
-  text-decoration: underline;
+  &:hover {
+    color: var(--color-primary);
+    text-decoration: underline;
+  }
 }
 
 .crumb-text {
-  color: var(--color-text-dark);
+  color: var(--body-text-color);
   font-weight: 500;
 }
 
 .separator {
   margin: 0 0.5rem;
-  color: #9ca3af;
+  color: var(--separator-color);
 }
 
 .page-title {
@@ -179,29 +179,29 @@ defineEmits(['sign-in']);
   transition: all 0.2s;
   background: var(--color-primary);
   color: white;
-}
 
-.btn-header-action:hover {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
+  &:hover {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+  }
 }
 
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
-}
+  background: var(--btn-secondary-bg);
+  color: var(--btn-secondary-text);
 
-.btn-secondary:hover {
-  background: #e5e7eb;
+  &:hover {
+    background: var(--btn-secondary-hover-bg);
+  }
 }
 
 .btn-danger {
-  background: #fee2e2;
-  color: #dc2626;
-}
+  background: var(--btn-danger-bg);
+  color: var(--btn-danger-text);
 
-.btn-danger:hover {
-  background: #fecaca;
+  &:hover {
+    background: var(--btn-danger-hover-bg);
+  }
 }
 
 .user-info {
@@ -209,19 +209,18 @@ defineEmits(['sign-in']);
   align-items: center;
   gap: 0.75rem;
   cursor: pointer;
-  padding: 0.25rem;
+  padding: 6px 12px;
   border-radius: 8px;
   transition: background 0.2s;
-  padding: 6px 12px;
-}
 
-.user-info:hover {
-  background: #f3f4f6;
+  &:hover {
+    background: var(--btn-secondary-bg);
+  }
 }
 
 .user-name {
   font-weight: 600;
-  color: var(--color-text-dark);
+  color: var(--body-text-color);
 }
 
 .avatar-circle {
@@ -246,11 +245,11 @@ defineEmits(['sign-in']);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
-}
 
-.btn-signin:hover {
-  background: var(--color-primary);
-  color: white;
+  &:hover {
+    background: var(--color-primary);
+    color: white;
+  }
 }
 
 .menu-item {
@@ -258,29 +257,29 @@ defineEmits(['sign-in']);
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  color: var(--color-text-dark);
+  color: var(--body-text-color);
   cursor: pointer;
   transition: background 0.2s;
   white-space: nowrap;
   margin: 0 8px;
   border-radius: 4px;
-}
 
-.menu-item:hover {
-  background: #f3f4f6;
-}
+  &:hover {
+    background: var(--btn-secondary-bg);
+  }
 
-.menu-item.logout {
-  color: #dc2626;
-}
+  &.logout {
+    color: var(--btn-danger-text);
 
-.menu-item.logout:hover {
-  background: #fee2e2;
+    &:hover {
+      background: var(--btn-danger-bg);
+    }
+  }
 }
 
 .menu-divider {
   height: 1px;
-  background: #e5e7eb;
+  background: var(--border-light);
   margin: 0.5rem 0;
 }
 
