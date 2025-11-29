@@ -18,7 +18,8 @@ export async function createRecipe(
   token,
   title,
   link = null,
-  description = null
+  description = null,
+  isPublic = false,
 ) {
   if (typeof token !== "string") throw new TypeError("Token is required.");
   if (typeof title !== "string") throw new TypeError("Title is required.");
@@ -29,6 +30,7 @@ export async function createRecipe(
       title,
       link,
       description,
+      isPublic,
     });
     console.log("API response for createRecipe:", response.data);
 
@@ -462,6 +464,19 @@ export async function deleteImage(token, recipeId) {
   } catch (err) {
     throw new Error(err.response?.data?.error || "Failed to delete image.");
   }
+}
+
+
+/**
+ * @route POST api/Recipe/setRecipePublic
+ */
+export async function setRecipePublic(token, recipeId, isPublic) {
+    try {
+      await api.post("/setRecipePublic", { token, recipe: recipeId, isPublic });
+      return true;
+    } catch (err) {
+      throw new Error(err.response?.data?.error || "Failed to set public flag.");
+    }
 }
 
 // --- Global Ingredient CRUD ---

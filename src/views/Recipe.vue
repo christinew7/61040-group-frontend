@@ -724,7 +724,8 @@ async function handleRecipeSubmit(recipeData) {
       token.value,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined
+      recipeData.description?.trim() || undefined,
+      Boolean(recipeData.isPublic)
     );
 
     // Set image separately if provided

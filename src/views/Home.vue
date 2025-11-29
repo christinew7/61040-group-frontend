@@ -193,7 +193,7 @@ async function handleRecipeSubmit(recipeData) {
       token.value,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined
+      recipeData.description?.trim() || undefined,
     );
     console.log("Recipe created with ID:", recipeId);
 
@@ -207,6 +207,16 @@ async function handleRecipeSubmit(recipeData) {
       }
     }
 
+    // Set isPublic flag separately if provided
+    if (typeof recipeData.isPublic === "boolean") {
+      try {
+        // Assuming there's an API function to set the public flag
+        await setRecipePublic(token.value, recipeId, recipeData.isPublic);
+        console.log("Public flag set successfully");
+      } catch (error) {
+        console.error("Failed to set public flag:", error);
+      }
+    }
     // Add ingredients if provided
     if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
       try {

@@ -66,6 +66,7 @@ import {
   parseIngredients,
   setImage,
   getAllMyRecipes,
+  setRecipePublic
 } from "./api/Recipe.js";
 import "./utils/app.css";
 
@@ -173,7 +174,8 @@ async function handleRecipeSubmit(recipeData) {
       authToken,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined
+      recipeData.description?.trim() || undefined,
+      recipeData.isPublic || false,
     );
 
     // Set image separately if provided
@@ -225,7 +227,7 @@ async function handleRecipeSubmit(recipeData) {
 async function handleParsedRecipeSubmit(submissionData) {
   try {
     const authToken = getToken();
-    const { parsedRecipeId, image, collection } = submissionData;
+    const { parsedRecipeId, image, collection, isPublic } = submissionData;
 
     // Set image if provided
     if (image?.trim()) {
@@ -236,6 +238,17 @@ async function handleParsedRecipeSubmit(submissionData) {
         console.error("Failed to set image:", error);
       }
     }
+    
+    if (typeof isPublic === "boolean") {
+        try {
+            // Assuming there's an API function to set the public flag
+            await setRecipePublic(authToken, parsedRecipeId, isPublic);
+            console.log("Public flag set successfully");
+        } catch (error) {
+            console.error("Failed to set public flag:", error);
+        }
+        }
+
 
     // Add to collection if selected
     if (collection && parsedRecipeId) {
