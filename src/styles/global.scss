@@ -1,0 +1,42 @@
+/**
+ * Global Styles (SCSS)
+ * Base styles and resets
+ */
+
+// Import theme variables first
+@import 'theme';
+
+// ===== RESET =====
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+// ===== BASE STYLES =====
+
+body {
+  font-family: var(--body-font-family);
+  font-size: var(--body-font-size);
+  color: var(--body-text-color);
+  background: var(--body-background-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+// ===== LAYOUT =====
+
+.app-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}

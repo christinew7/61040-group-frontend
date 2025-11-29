@@ -1,0 +1,28 @@
+/**
+ * Theme System (SCSS)
+ * 
+ * SCSS variables describe the VALUE (e.g., $gray-50, $primary-green)
+ * CSS variables describe the USAGE (e.g., --app-main-content-background)
+ */
+
+//==============================================================================
+// SCSS VARIABLE DEFINITIONS (Value-based naming)
+//==============================================================================
+
+// Typography Values
+$font-system: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+//==============================================================================
+// CSS VARIABLE GENERATION (Usage-based naming)
+//==============================================================================
+
+:root {
+  // App Layout
+  --app-main-content-background: #f9fafb;
+
+  // Body/Base Styles
+  --body-font-family: #{$font-system};
+  --body-font-size: 16px;
+  --body-text-color: #0f172a;
+  --body-background-color: #f9fafb;
+}
