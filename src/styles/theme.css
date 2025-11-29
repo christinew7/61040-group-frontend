@@ -1,0 +1,10 @@
+/* 
+ * Minimal Theme System
+ * Only contains variables actually used in components
+ * Add new variables as needed during migration
+ */
+
+:root {
+  /* App Layout */
+  --app-main-content-background: #f9fafb;
+}

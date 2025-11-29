@@ -328,6 +328,6 @@ async function handleCollectionSubmit(collectionData) {
   flex: 1;
   /* Ensure proper sizing */
   width: 0;
-  background: #f9fafb;
+  background: var(--app-main-content-background);
 }
 </style>
