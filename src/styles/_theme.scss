@@ -64,4 +64,21 @@ $font-system: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Ar
   --btn-danger-bg: #{$red-100};
   --btn-danger-text: #{$red-500};
   --btn-danger-hover-bg: #{$red-200};
+
+  // Sidebar
+  --sidebar-width: 260px;
+  --sidebar-background: #ffffff;
+  --sidebar-border-color: #{$gray-200};
+
+  // Form Inputs
+  --input-border-color: #{$gray-200};
+  --input-placeholder-color: #{$gray-400};
+  --input-focus-border-color: #{$primary-green};
+
+  // Chips
+  --chip-background: rgba(200, 200, 200, 0.25);
+  --chip-border-color: #{$gray-200};
+  --chip-text-color: #111827;
+  --chip-selected-background: #{$primary-green};
+  --chip-selected-text-color: #ffffff;
 }

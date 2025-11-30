@@ -87,7 +87,7 @@
 import { ref } from "vue";
 import { useAuth } from "../composables/useAuth.js";
 import IngredientChip from "./IngredientChip.vue";
-import "./Sidebar.css";
+import "./Sidebar.scss";
 import chipsData from "../utils/chips.json";
 
 const props = defineProps({
