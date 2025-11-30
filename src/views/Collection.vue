@@ -104,6 +104,17 @@
         </div>
       </div>
     </div>
+
+    <!-- Success Message -->
+    <div v-if="showSuccessMessage" class="message success-message">
+      ✓ {{ successMessage }}
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="showErrorMessage" class="message error-message">
+      ✗ {{ errorMessage }}
+    </div>
+
   </div>
 </template>
 
@@ -161,9 +172,15 @@ const newMemberEmail = ref("");
 // Collections data for recipe popup
 const userCollections = ref([]);
 
+//short term sucess/error message 
+const showSuccessMessage = ref(false);
+const successMessage = ref("");
+const showErrorMessage = ref(false);
+const errorMessage = ref("");
+
 // Helper function to get auth token
 function getToken() {
-  return token.value || "demo-token";
+  return token.value;
 }
 
 // Fetch collection details on mount
@@ -185,6 +202,24 @@ async function fetchUserCollections() {
   } catch (error) {
     console.error("Failed to fetch user collections:", error);
   }
+}
+
+function showSuccess(message) {
+  successMessage.value = message;
+  showSuccessMessage.value = true;
+
+  setTimeout(() => {
+    showSuccessMessage.value = false;
+  }, 3000);
+}
+
+function showError(message) {
+  errorMessage.value = message;
+  showErrorMessage.value = true;
+
+  setTimeout(() => {
+    showErrorMessage.value = false;
+  }, 5000);
 }
 
 async function fetchCollectionDetails() {
@@ -357,7 +392,7 @@ function toggleMembersDropdown() {
 
 async function handleAddMember() {
   if (!newMemberEmail.value || !newMemberEmail.value.trim()) {
-    alert("Please enter a valid email address");
+    showError("Please enter a valid email address");
     return;
   }
 
@@ -368,13 +403,13 @@ async function handleAddMember() {
       collectionId.value,
       newMemberEmail.value.trim()
     );
-    alert(`Successfully added ${newMemberEmail.value} to the collection!`);
+    showSuccess(`Successfully added ${newMemberEmail.value} to the collection!`);
     closeAddMemberDialog();
     // Refresh collection to update members list
     await fetchCollectionDetails();
   } catch (error) {
     console.error("Failed to add member:", error);
-    alert(`Failed to add member: ${error.message}`);
+    showError(`Failed to add member: ${error.message}`);
   }
 }
 
@@ -388,12 +423,12 @@ async function handleDeleteCollection() {
   try {
     const authToken = getToken();
     await deleteCollection(authToken, collectionId.value);
-    alert(`Collection "${collectionName.value}" has been deleted.`);
+    showSuccess(`Collection "${collectionName.value}" has been deleted.`);
     // Navigate back to profile page
     router.push("/profile");
   } catch (error) {
     console.error("Failed to delete collection:", error);
-    alert(`Failed to delete collection: ${error.message}`);
+    showError(`Failed to delete collection: ${error.message}`);;
   }
 }
 
@@ -404,7 +439,7 @@ async function handleLogout() {
 
 async function handleRecipeSubmit(recipeData) {
   if (!token.value) {
-    alert("Please sign in to create a recipe");
+    showError("Please sign in to create a recipe");
     return;
   }
 
@@ -452,20 +487,20 @@ async function handleRecipeSubmit(recipeData) {
       }
     }
 
-    alert(`Recipe "${recipeData.name}" created successfully!`);
+    showSuccess(`Recipe "${recipeData.name}" created successfully!`);
 
     // Always refresh collection details to show potentially new recipe
     await fetchCollectionDetails();
     await fetchUserCollections();
   } catch (error) {
     console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
+    showError(`Failed to create recipe: ${error.message}`);
   }
 }
 
 async function handleParsedRecipeSubmit(submissionData) {
   if (!token.value) {
-    alert("Please sign in to create a recipe");
+    showError("Please sign in to create a recipe");
     return;
   }
 
@@ -492,14 +527,14 @@ async function handleParsedRecipeSubmit(submissionData) {
       }
     }
 
-    alert("Recipe created successfully from link!");
+    showSuccess("Recipe created successfully from link!");
 
     // Always refresh collection details to show potentially new recipe
     await fetchCollectionDetails();
     await fetchUserCollections();
   } catch (error) {
     console.error("Failed to update parsed recipe:", error);
-    alert(`Failed to update recipe: ${error.message}`);
+    showError(`Failed to update recipe: ${error.message}`);
   }
 }
 
@@ -840,5 +875,30 @@ function getMemberUserId(member) {
   text-align: center;
   padding: 1rem;
   margin: 0;
+}
+
+/* Short term success/error message */
+
+.message {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+  z-index: 1000;
+}
+
+.success-message {
+  background: #059669;
+  color: white;
+}
+
+.error-message {
+  background: #dc2626;
+  color: white;
 }
 </style>
