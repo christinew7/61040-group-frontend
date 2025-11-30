@@ -1,0 +1,82 @@
+{
+    "categories": [
+        "common pantry items",
+        "meat",
+        "vegetables",
+        "fruits",
+        "condiments and seasonings"
+    ],
+    "common pantry items": [
+        "butter",
+        "egg",
+        "garlic",
+        "flour",
+        "sugar",
+        "rice",
+        "bread",
+        "pasta",
+        "milk",
+        "cheese"
+    ],
+    "vegetables": [
+        "carrot",
+        "broccoli",
+        "spinach",
+        "onion",
+        "potato",
+        "tomato",
+        "bell pepper",
+        "zucchini",
+        "garlic",
+        "corn",
+        "mushroom",
+        "cabbage"
+    ],
+    "fruits": [
+        "apple",
+        "banana",
+        "orange",
+        "strawberry",
+        "grape",
+        "mango",
+        "blueberry",
+        "kiwi",
+        "peach",
+        "watermelon",
+        "pineapple",
+        "cherry",
+        "lemon"
+    ],
+    "meat": [
+        "chicken breast",
+        "ground beef",
+        "tofu",
+        "pork chops",
+        "salmon",
+        "shrimp",
+        "bacon",
+        "turkey",
+        "sausage",
+        "lamb"
+        
+    ],
+    "condiments and seasonings": [
+        "ketchup",
+        "mustard",
+        "mayonnaise",
+        "soy sauce",
+        "vinegar",
+        "hot sauce",
+        "honey",
+        "salt",
+        "black pepper",
+        "paprika",
+        "cumin",
+        "oregano",
+        "basil",
+        "thyme",
+        "rosemary",
+        "pesto",
+        "alfredo sauce"
+    ]
+}

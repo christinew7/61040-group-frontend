@@ -60,6 +60,25 @@
           @remove="removeIngredient(ingredient)"
         />
       </div>
+
+      <!-- Pre-defined Ingredient Catalog -->
+      <div class="chips-catalog">
+        <h4 class="catalog-heading">Ingredient Library</h4>
+        <div v-for="category in categories" :key="category" class="chip-category">
+          <div class="category-name">{{ category }}</div>
+          <div class="category-chips">
+            <button
+              v-for="chip in getChips(category)"
+              :key="chip"
+              :class="['chip', { 'chip-selected': isSelected(chip) }]"
+              @click.prevent="toggleChip(chip)"
+              type="button"
+            >
+              {{ chip }}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   </aside>
 </template>
@@ -69,6 +88,7 @@ import { ref } from "vue";
 import { useAuth } from "../composables/useAuth.js";
 import IngredientChip from "./IngredientChip.vue";
 import "./Sidebar.css";
+import chipsData from "../utils/chips.json";
 
 const props = defineProps({
   showSearch: {
@@ -93,6 +113,14 @@ const { isLoggedIn } = useAuth();
 const recipeSearchQuery = ref("");
 const ingredientFilterInput = ref("");
 const selectedIngredients = ref([]);
+
+// Chips/catalog from JSON
+const categories = chipsData?.categories || [];
+
+function getChips(category) {
+  // chipsData has arrays keyed by category names
+  return chipsData[category] || [];
+}
 
 function handleProfileClick() {
   emit("profile-click");
@@ -133,6 +161,20 @@ function addIngredientFilter() {
     ingredientFilterInput.value = "";
     emit("ingredient-filter-change", selectedIngredients.value);
   }
+}
+
+function isSelected(ingredient) {
+  return selectedIngredients.value.includes(ingredient);
+}
+
+function toggleChip(ingredient) {
+  const idx = selectedIngredients.value.indexOf(ingredient);
+  if (idx === -1) {
+    selectedIngredients.value.push(ingredient);
+  } else {
+    selectedIngredients.value.splice(idx, 1);
+  }
+  emit("ingredient-filter-change", selectedIngredients.value);
 }
 
 function removeIngredient(ingredient) {
