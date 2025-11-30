@@ -23,6 +23,25 @@
       </div>
     </section>
 
+    <!-- Recipes that are in the user's collections -->
+    <section v-if="isLoggedIn" class="recipes-section">
+      <h3>Recipes In My Collections ({{ filteredCollectionRecipes.length }})</h3>
+      <div v-if="collectionRecipes.length === 0" class="empty-state">
+        You don't have any recipes in your collections yet.
+      </div>
+      <div v-else-if="filteredCollectionRecipes.length === 0" class="empty-state">
+        No recipes match your search criteria.
+      </div>
+      <div v-else class="recipes-grid">
+        <RecipeDisplay
+          v-for="recipe in filteredCollectionRecipes"
+          :key="recipe._id"
+          :recipe="recipe"
+          @click="onRecipeClick"
+        />
+      </div>
+    </section>
+
     <!-- Public Recipes Section -->
     <section class="recipes-section">
       <h3>Public Recipes ({{ filteredRecipes.length }})</h3>
@@ -110,21 +129,26 @@ const { token, isLoggedIn, logout, init, user } = useAuth();
 const showLogin = ref(false);
 
 // Recipes from API
-const allRecipes = ref([]);
+const allRecipes = ref([]); //global recipes
 const myRecipes = ref([]);
+const collectionRecipes = ref([]);
 const isLoading = ref(false);
 
-// Computed filtered recipes
+// Computed filtered global recipes
 const filteredRecipes = computed(() => {
   let recipes = allRecipes.value;
 
   // Exclude recipes that belong to the current user (so they only appear in My Recipes)
   if (isLoggedIn.value) {
-    const myIds = new Set((myRecipes.value || []).map((r) => r._id));
+    const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
+    const collectionRecipesSet = new Set((collectionRecipes.value || []).map((r) => r._id));
     const myOwnerId = user.value?.userId;
     recipes = recipes.filter((r) => {
       if (!r) return false;
-      if (myIds.has(r._id)) return false;
+      // Exclude recipes the user owns (shown in My Recipes)
+      if (myRecipesSet.has(r._id)) return false;
+      // Exclude recipes that are already in the user's collections
+      if (collectionRecipesSet.has(r._id)) return false;
       if (myOwnerId && r.owner === myOwnerId) return false;
       return true;
     });
@@ -181,6 +205,39 @@ const filteredMyRecipes = computed(() => {
   return recipes;
 });
 
+// Computed filtered recipes that come from the user's collections
+const filteredCollectionRecipes = computed(() => {
+  let recipes = collectionRecipes.value || [];
+
+  // Filter out recipes in myRecipes to avoid duplicates
+  if (isLoggedIn.value) {
+    const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
+    recipes = recipes.filter((r) => !myRecipesSet.has(r._id));
+  }
+  
+  // Filter by search query (recipe title)
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    recipes = recipes.filter((recipe) =>
+      recipe.title?.toLowerCase().includes(query)
+    );
+  }
+
+  // Filter by ingredients
+  if (ingredientFilters.value.length > 0) {
+    recipes = recipes.filter((recipe) => {
+      return ingredientFilters.value.every((filterIngredient) => {
+        const filterLower = filterIngredient.toLowerCase();
+        return recipe.ingredients?.some((ingredient) =>
+          ingredient.name?.toLowerCase().includes(filterLower)
+        );
+      });
+    });
+  }
+
+  return recipes;
+});
+
 onMounted(async () => {
   setTitle("home");
   setBreadcrumbs([]);
@@ -189,6 +246,7 @@ onMounted(async () => {
   await fetchAllRecipes();
   if (isLoggedIn.value) {
     await fetchMyRecipes();
+    await fetchCollections();
   }
 });
 
@@ -206,6 +264,7 @@ async function fetchMyRecipes() {
   }
 }
 
+//Global recipes
 async function fetchAllRecipes() {
   isLoading.value = true;
   try {
@@ -244,7 +303,34 @@ async function fetchCollections() {
 
   try {
     const response = await getMyCollections(token.value);
-    userCollections.value = response;
+    userCollections.value = response || [];
+
+    // Aggregate recipe objects from the user's collections.
+    // Collections may include an `items` array with recipe objects or IDs.
+    const aggregated = [];
+    const seen = new Set();
+    (userCollections.value || []).forEach((col) => {
+      const items = col.items || col.recipes || [];
+      if (!Array.isArray(items)) return;
+      items.forEach((it) => {
+        // Item might be a recipe object or an id or wrapped object
+        let candidate = it;
+        if (candidate && candidate.recipe) candidate = candidate.recipe;
+        const id = (candidate && (candidate._id || candidate.id)) || (typeof candidate === 'string' ? candidate : null);
+        if (!id) return;
+        if (seen.has(id)) return;
+        seen.add(id);
+        // If we only have an id, try to find the full recipe in fetched lists
+        if (typeof candidate === 'string') {
+          const found = (allRecipes.value || []).find((r) => r._id === candidate) || (myRecipes.value || []).find((r) => r._id === candidate);
+          if (found) aggregated.push(found);
+        } else {
+          aggregated.push(candidate);
+        }
+      });
+    });
+
+    collectionRecipes.value = aggregated;
   } catch (error) {
     console.error("Failed to fetch collections:", error);
   }
@@ -314,6 +400,8 @@ async function handleRecipeSubmit(recipeData) {
       try {
         await addItemToCollection(token.value, recipeData.collection, recipeId);
         console.log(`Added recipe to collection: ${recipeData.collection}`);
+        // Refresh collections so the "Recipes In My Collections" section updates
+        await fetchCollections();
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
       }
@@ -353,6 +441,8 @@ async function handleParsedRecipeSubmit(submissionData) {
       try {
         await addItemToCollection(token.value, collection, parsedRecipeId);
         console.log(`Added recipe to collection: ${collection}`);
+        // Refresh collections so the collection recipes list updates
+        await fetchCollections();
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
       }
