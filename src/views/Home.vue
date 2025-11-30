@@ -5,7 +5,7 @@
 
     <!-- Public Recipes Section -->
     <!-- My Recipes (owner) -->
-    <section v-else-if="isLoggedIn" class="recipes-section">
+    <section v-if="isLoggedIn" class="recipes-section">
       <h3>My Recipes ({{ filteredMyRecipes.length }})</h3>
       <div v-if="myRecipes.length === 0" class="empty-state">
         You haven't created any recipes yet. Add one from the sidebar!
@@ -13,13 +13,20 @@
       <div v-else-if="filteredMyRecipes.length === 0" class="empty-state">
         No recipes match your search criteria.
       </div>
-      <div v-else class="recipes-grid">
-        <RecipeDisplay
-          v-for="recipe in filteredMyRecipes"
-          :key="recipe._id"
-          :recipe="recipe"
-          @click="onRecipeClick"
-        />
+      <div v-else>
+        <div v-if="viewMode === 'grid'" class="recipes-grid">
+          <RecipeDisplay
+            v-for="recipe in filteredMyRecipes"
+            :key="recipe._id"
+            :recipe="recipe"
+            @click="onRecipeClick"
+          />
+        </div>
+        <div v-else class="recipes-row">
+          <div class="recipe-item" v-for="recipe in filteredMyRecipes" :key="recipe._id">
+            <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
+          </div>
+        </div>
       </div>
     </section>
 
@@ -32,13 +39,20 @@
       <div v-else-if="filteredCollectionRecipes.length === 0" class="empty-state">
         No recipes match your search criteria.
       </div>
-      <div v-else class="recipes-grid">
-        <RecipeDisplay
-          v-for="recipe in filteredCollectionRecipes"
-          :key="recipe._id"
-          :recipe="recipe"
-          @click="onRecipeClick"
-        />
+      <div v-else>
+        <div v-if="viewMode === 'grid'" class="recipes-grid">
+          <RecipeDisplay
+            v-for="recipe in filteredCollectionRecipes"
+            :key="recipe._id"
+            :recipe="recipe"
+            @click="onRecipeClick"
+          />
+        </div>
+        <div v-else class="recipes-row">
+          <div class="recipe-item" v-for="recipe in filteredCollectionRecipes" :key="recipe._id">
+            <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
+          </div>
+        </div>
       </div>
     </section>
 
@@ -54,15 +68,29 @@
       <div v-else-if="filteredRecipes.length === 0" class="empty-state">
         No recipes match your search criteria.
       </div>
-      <div v-else class="recipes-grid">
-        <RecipeDisplay
-          v-for="recipe in filteredRecipes"
-          :key="recipe._id"
-          :recipe="recipe"
-          @click="onRecipeClick"
-        />
+      <div v-else>
+        <div v-if="viewMode === 'grid'" class="recipes-grid">
+          <RecipeDisplay
+            v-for="recipe in filteredRecipes"
+            :key="recipe._id"
+            :recipe="recipe"
+            @click="onRecipeClick"
+          />
+        </div>
+        <div v-else class="recipes-row">
+          <div class="recipe-item" v-for="recipe in filteredRecipes" :key="recipe._id">
+            <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
+          </div>
+        </div>
       </div>
     </section>
+
+    <!-- Global view toggle -->
+    <div class="global-view-toggle">
+      <button class="view-toggle" @click="toggleViewMode">
+        {{ viewMode === 'grid' ? 'Horizontal' : 'Grid' }}
+      </button>
+    </div>
 
     <!-- Debug output
     <section class="debug-section">
@@ -294,6 +322,13 @@ function onLoginSuccess() {
 // Popup state
 const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
+
+// Global view mode for all sections: 'grid' or 'horizontal'
+const viewMode = ref("grid");
+
+function toggleViewMode() {
+  viewMode.value = viewMode.value === "grid" ? "horizontal" : "grid";
+}
 
 // Collections data
 const userCollections = ref([]);
@@ -580,6 +615,51 @@ function onRecipeClick(recipe) {
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
   margin-bottom: 2rem;
+}
+
+/* Horizontal scroll layout */
+.recipes-row {
+  display: flex;
+  gap: 1.5rem;
+  overflow-x: auto;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(15,23,42,0.06);
+  background: rgba(255,255,255,0.9);
+  border-radius: 8px;
+}
+
+.recipe-item {
+  flex: 0 0 320px; /* show ~3-4 items depending on container width */
+  border: none;
+  background: transparent;
+}
+
+.recipes-row::-webkit-scrollbar {
+  height: 10px;
+}
+.recipes-row::-webkit-scrollbar-thumb {
+  background: rgba(15,23,42,0.15);
+  border-radius: 8px;
+}
+.global-view-toggle {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  width: 100%;
+}
+.view-toggle {
+  margin-left: 0.75rem;
+  font-size: 0.85rem;
+  padding: 0.25rem 0.5rem;
+  /* border-radius: 6px; */
+  border: none;
+  background: transparent;
+  color: lightgray;
+  /* cursor: pointer; */
+}
+.view-toggle:hover {
+  background: #f3f4f6;
 }
 
 .empty-state {
