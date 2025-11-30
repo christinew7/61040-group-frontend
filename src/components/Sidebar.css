@@ -1,20 +1,23 @@
 .sidebar {
   width: 260px;
-  height: fit-content;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  height: 100vh;
   background: var(--color-bg-light, #ffffff);
   border-right: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
   flex: 0 0 260px;
-  align-self: stretch;
-  overflow: hidden;
   padding: 1rem;
+  overflow-y: auto; /* allow the sidebar to scroll independently */
+  z-index: 1000;
 }
 
 .sidebar-content {
   flex: 1;
   padding: 1.5rem 1rem;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 1.5rem;

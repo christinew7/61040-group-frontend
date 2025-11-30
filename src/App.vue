@@ -354,6 +354,7 @@ async function handleCollectionSubmit(collectionData) {
   flex: 1;
   /* Ensure proper sizing */
   width: 0;
+  margin-left: 260px; /* account for fixed sidebar width */
   background: var(--app-main-content-background);
 }
 </style>
