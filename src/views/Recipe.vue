@@ -84,7 +84,7 @@
                 :key="index"
                 class="ingredient-item"
               >
-                <span v-if="ingredient.quantity" class="ingredient-quantity">
+                <span v-if="ingredient.quantity !== -1 && ingredient.quantity !== null && ingredient.quantity !== undefined" class="ingredient-quantity">
                   {{ ingredient.quantity }}
                 </span>
                 <span v-if="ingredient.unit" class="ingredient-unit">
@@ -558,7 +558,7 @@ function handleEditRecipe() {
   // Convert ingredients array to text format - ALWAYS include all 3 parts
   const ingredientsText = (recipe.value.ingredients || [])
     .map(ing => {
-      const quantity = ing.quantity ?? "";
+      const quantity = (ing.quantity === -1) ? "" : (ing.quantity ?? "");
       const unit = ing.unit ?? "";
       const name = ing.name ?? "";
       return `${quantity}, ${unit}, ${name}`;
@@ -632,7 +632,7 @@ async function submitEdit() {
     // FIXED: Always use "quantity, unit, name" format even if unit is empty
     const originalIngredientsText = (recipe.value.ingredients || [])
       .map(ing => {
-        const quantity = ing.quantity ?? "";
+        const quantity = (ing.quantity === -1) ? "" : (ing.quantity ?? "");
         const unit = ing.unit ?? "";
         const name = ing.name ?? "";
         return `${quantity}, ${unit}, ${name}`;
@@ -653,10 +653,23 @@ async function submitEdit() {
       // Add new ingredients
       if (editForm.value.ingredientsText.trim()) {
 
+        // Normalize ingredients: convert blank quantities to -1
+        const normalizedEdit = editForm.value.ingredientsText
+          .split("\n")
+          .map((line) => {
+            const parts = line.split(",");
+            const quantityRaw = (parts[0] || "").trim();
+            const quantity = quantityRaw === "" ? "-1" : quantityRaw;
+            const unit = (parts[1] || "").trim();
+            const name = parts.slice(2).join(",").trim();
+            return `${quantity}, ${unit}, ${name}`;
+          })
+          .join("\n");
+
         await parseIngredients(
           token.value,
           recipe.value._id,
-          editForm.value.ingredientsText
+          normalizedEdit
         );
       }
     }
@@ -767,11 +780,20 @@ async function handleRecipeSubmit(recipeData) {
     // Add ingredients if provided
     if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
       try {
-        await parseIngredients(
-          token.value,
-          recipeId,
-          recipeData.ingredientsText
-        );
+        // Normalize ingredients: convert blank quantities to -1
+        const normalized = recipeData.ingredientsText
+          .split("\n")
+          .map((line) => {
+            const parts = line.split(",");
+            const quantityRaw = (parts[0] || "").trim();
+            const quantity = quantityRaw === "" ? "-1" : quantityRaw;
+            const unit = (parts[1] || "").trim();
+            const name = parts.slice(2).join(",").trim();
+            return `${quantity}, ${unit}, ${name}`;
+          })
+          .join("\n");
+
+        await parseIngredients(token.value, recipeId, normalized);
       } catch (error) {
         console.error("Failed to add ingredients:", error);
       }

@@ -190,7 +190,20 @@ async function handleRecipeSubmit(recipeData) {
 
     if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
       try {
-        await parseIngredients(authToken, recipeId, recipeData.ingredientsText);
+        // Normalize ingredients: convert blank quantities to -1
+        const normalized = recipeData.ingredientsText
+          .split("\n")
+          .map((line) => {
+            const parts = line.split(",");
+            const quantityRaw = (parts[0] || "").trim();
+            const quantity = quantityRaw === "" ? "-1" : quantityRaw;
+            const unit = (parts[1] || "").trim();
+            const name = parts.slice(2).join(",").trim();
+            return `${quantity}, ${unit}, ${name}`;
+          })
+          .join("\n");
+
+        await parseIngredients(authToken, recipeId, normalized);
       } catch (error) {
         console.error("Failed to add ingredients:", error);
       }
