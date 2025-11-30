@@ -4,7 +4,27 @@
     <div v-if="isLoading" class="loading-state">Loading recipes...</div>
 
     <!-- Public Recipes Section -->
-    <section v-else class="recipes-section">
+    <!-- My Recipes (owner) -->
+    <section v-else-if="isLoggedIn" class="recipes-section">
+      <h3>My Recipes ({{ filteredMyRecipes.length }})</h3>
+      <div v-if="myRecipes.length === 0" class="empty-state">
+        You haven't created any recipes yet. Add one from the sidebar!
+      </div>
+      <div v-else-if="filteredMyRecipes.length === 0" class="empty-state">
+        No recipes match your search criteria.
+      </div>
+      <div v-else class="recipes-grid">
+        <RecipeDisplay
+          v-for="recipe in filteredMyRecipes"
+          :key="recipe._id"
+          :recipe="recipe"
+          @click="onRecipeClick"
+        />
+      </div>
+    </section>
+
+    <!-- Public Recipes Section -->
+    <section class="recipes-section">
       <h3>Public Recipes ({{ filteredRecipes.length }})</h3>
       <div
         v-if="filteredRecipes.length === 0 && allRecipes.length === 0"
@@ -81,20 +101,34 @@ import {
   setImage,
   getAllRecipesGlobal,
   searchRecipes,
+  getAllMyRecipes,
 } from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
 import LoginPopup from "../components/LoginPopup.vue";
 
-const { token, isLoggedIn, logout, init } = useAuth();
+const { token, isLoggedIn, logout, init, user } = useAuth();
 const showLogin = ref(false);
 
 // Recipes from API
 const allRecipes = ref([]);
+const myRecipes = ref([]);
 const isLoading = ref(false);
 
 // Computed filtered recipes
 const filteredRecipes = computed(() => {
   let recipes = allRecipes.value;
+
+  // Exclude recipes that belong to the current user (so they only appear in My Recipes)
+  if (isLoggedIn.value) {
+    const myIds = new Set((myRecipes.value || []).map((r) => r._id));
+    const myOwnerId = user.value?.userId;
+    recipes = recipes.filter((r) => {
+      if (!r) return false;
+      if (myIds.has(r._id)) return false;
+      if (myOwnerId && r.owner === myOwnerId) return false;
+      return true;
+    });
+  }
 
   // Filter by search query (recipe title)
   if (searchQuery.value.trim()) {
@@ -120,13 +154,57 @@ const filteredRecipes = computed(() => {
   return recipes;
 });
 
+// Computed filtered my-recipes (apply same search/ingredient filters)
+const filteredMyRecipes = computed(() => {
+  let recipes = myRecipes.value;
+
+  // Filter by search query (recipe title)
+  if (searchQuery.value.trim()) {
+    const query = searchQuery.value.toLowerCase().trim();
+    recipes = recipes.filter((recipe) =>
+      recipe.title?.toLowerCase().includes(query)
+    );
+  }
+
+  // Filter by ingredients
+  if (ingredientFilters.value.length > 0) {
+    recipes = recipes.filter((recipe) => {
+      return ingredientFilters.value.every((filterIngredient) => {
+        const filterLower = filterIngredient.toLowerCase();
+        return recipe.ingredients?.some((ingredient) =>
+          ingredient.name?.toLowerCase().includes(filterLower)
+        );
+      });
+    });
+  }
+
+  return recipes;
+});
+
 onMounted(async () => {
   setTitle("home");
   setBreadcrumbs([]);
   setActions([]);
   await init();
   await fetchAllRecipes();
+  if (isLoggedIn.value) {
+    await fetchMyRecipes();
+  }
 });
+
+async function fetchMyRecipes() {
+  if (!isLoggedIn.value) return;
+  isLoading.value = true;
+  try {
+    const recipes = await getAllMyRecipes(token.value);
+    myRecipes.value = (recipes || []).reverse();
+  } catch (err) {
+    console.error("Failed to fetch my recipes:", err);
+    myRecipes.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+}
 
 async function fetchAllRecipes() {
   isLoading.value = true;
