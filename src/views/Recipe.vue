@@ -236,18 +236,60 @@
             </div>
             
             <div class="form-group">
-              <label for="edit-image">Image URL</label>
-              <input 
-                id="edit-image" 
-                type="url" 
-                v-model="editForm.image" 
-                class="form-input"
-                placeholder="https://..."
-              />
+              <label>Image</label>
+              <div class="image-input-toggle">
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    v-model="imageInputType"
+                    value="url"
+                    name="editImageType"
+                  />
+                  <span>Image URL</span>
+                </label>
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    v-model="imageInputType"
+                    value="upload"
+                    name="editImageType"
+                  />
+                  <span>Upload Image</span>
+                </label>
+              </div>
+
+              <!-- Image URL Input -->
+              <div v-if="imageInputType === 'url'">
+                <input 
+                  id="edit-image" 
+                  type="url" 
+                  v-model="editForm.image" 
+                  class="form-input"
+                  placeholder="https://..."
+                />
+              </div>
+
+              <!-- Image Upload Input -->
+              <div v-else>
+                <input
+                  type="file"
+                  accept="image/*"
+                  @change="handleImageUpload"
+                  class="form-input file-input"
+                />
+                <p v-if="uploadedFileName" class="file-name">
+                  Selected: {{ uploadedFileName }}
+                </p>
+              </div>
+
+              <!-- Image Preview -->
               <div v-if="editForm.image" class="image-preview">
                 <img :src="editForm.image" alt="Preview" />
               </div>
+              
+              <span class="helper-text">Add an image URL or upload a file</span>
             </div>
+
             <div class="form-group">
               <label for="edit-public">Visibility</label>
               <div style="display:flex; gap:1rem; align-items:center">
@@ -304,7 +346,6 @@
 <script setup>
 import { computed, ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import Sidebar from "../components/Sidebar.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
 import {
@@ -383,6 +424,9 @@ const editForm = ref({
   isPublic: false,
 });
 
+// image input
+const imageInputType = ref("url");
+const uploadedFileName = ref("");
 
 
 const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
@@ -572,12 +616,32 @@ function handleEditRecipe() {
     ingredientsText: ingredientsText,
     isPublic: (typeof recipe.value.isPublic === 'boolean') ? recipe.value.isPublic : (recipe.value.public ?? false),
   };
+
+  // Reset image input type
+  imageInputType.value = "url";
+  uploadedFileName.value = "";
+
   showEditModal.value = true;
 }
 
 function closeEditModal() {
   showEditModal.value = false;
 }
+
+function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (file) {
+    uploadedFileName.value = file.name;
+
+    // Convert image to base64 data URL
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      editForm.value.image = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+}
+
 
 async function submitEdit() {
   // Validation: must have link OR description
@@ -686,8 +750,19 @@ async function submitEdit() {
     }
 
     // Refresh recipe data
-    await fetchRecipeDetails();
-    
+    const owner = recipe.value.owner;
+    const title = recipe.value.title;
+    const data = await getRecipe(owner, title);
+
+    let recipes = data;
+    if (Array.isArray(recipes) && recipes.length > 0) {
+      recipes = recipes[0];
+    }
+    if (recipes.recipes) {
+      recipes = recipes.recipes;
+    }
+    recipe.value = Array.isArray(recipes) ? recipes[0] : recipes;
+
     showEditModal.value = false;
     showSuccess("Recipe updated!");
   } catch (err) {
@@ -1397,5 +1472,32 @@ textarea.form-input {
 
 .btn-cancel:hover {
   background: #e5e7eb;
+}
+
+.image-input-toggle {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+  accent-color: var(--color-primary);
+}
+
+.file-input {
+  padding: 0.5rem;
+}
+
+.file-name {
+  font-size: 0.85rem;
+  color: #059669;
+  margin-top: 0.5rem;
 }
 </style>
