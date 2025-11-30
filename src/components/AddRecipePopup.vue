@@ -181,7 +181,33 @@
             <p class="form-hint">Optional: Add an image for your recipe</p>
           </div>
 
-          <!-- Step 5: Add to Collection -->
+                <!-- Visibility -->
+                <div class="form-section">
+                  <h3>Visibility</h3>
+                  <div class="image-input-group">
+                    <label class="radio-option">
+                      <input
+                        type="radio"
+                        v-model="formData.isPublic"
+                        :value="true"
+                        name="visibility"
+                      />
+                      <span>Public</span>
+                    </label>
+                    <label class="radio-option">
+                      <input
+                        type="radio"
+                        v-model="formData.isPublic"
+                        :value="false"
+                        name="visibility"
+                      />
+                      <span>Private</span>
+                    </label>
+                  </div>
+                  <p class="form-hint">Public recipes are visible to others; private recipes are only visible to you.</p>
+                </div>
+
+                <!-- Step 5: Add to Collection -->
           <div class="form-section">
             <h3>{{ inputMode === "manual" ? "6." : "" }} Add to Collection</h3>
             <select v-model="formData.collection" class="form-select">
@@ -252,6 +278,7 @@ const formData = ref({
   link: "",
   image: "",
   collection: "",
+  isPublic: false,
   ingredientsText: "",
 });
 
@@ -284,7 +311,10 @@ async function parseRecipeFromLink() {
       "Token being sent:",
       token.value ? `${token.value.substring(0, 20)}...` : "NO TOKEN"
     );
-    const recipe = await parseFromLink(token.value, formData.value.link);
+    const recipe = await parseFromLink(
+      token.value,
+      formData.value.link,
+    );
     console.log("Parsed recipe response:", recipe);
     console.log("Recipe owner:", recipe.owner);
 
@@ -342,6 +372,7 @@ function handleClose() {
       link: "",
       image: "",
       collection: "",
+      isPublic: false,
       ingredientsText: "",
     };
   }, 300);
@@ -364,6 +395,7 @@ function submitRecipe() {
     const submissionData = {
       parsedRecipeId: parsedRecipe.value._id,
       image: formData.value.image,
+      isPublic: Boolean(formData.value.isPublic),
       collection: formData.value.collection,
     };
     console.log("Submitting parsed recipe data:", submissionData);

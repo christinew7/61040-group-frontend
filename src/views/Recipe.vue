@@ -248,6 +248,20 @@
                 <img :src="editForm.image" alt="Preview" />
               </div>
             </div>
+            <div class="form-group">
+              <label for="edit-public">Visibility</label>
+              <div style="display:flex; gap:1rem; align-items:center">
+                <label style="display:flex; align-items:center; gap:0.5rem">
+                  <input type="radio" id="edit-public" name="visibility" v-model="editForm.isPublic" :value="true" />
+                  <span>Public</span>
+                </label>
+                <label style="display:flex; align-items:center; gap:0.5rem">
+                  <input type="radio" id="edit-private" name="visibility" v-model="editForm.isPublic" :value="false" />
+                  <span>Private</span>
+                </label>
+              </div>
+              <span class="helper-text">Public recipes are visible to others; private recipes are only visible to you.</span>
+            </div>
 
             <div class="form-group">
               <label for="edit-ingredients">Ingredients</label>
@@ -299,6 +313,8 @@ import {
   copyRecipe,
   viewRecipe,
   setImage,
+  createRecipe,
+  setRecipePublic,
   setDescription,
   setLink,
   removeLink,
@@ -364,6 +380,7 @@ const editForm = ref({
   link: "",
   image: "",
   ingredientsText: "",
+  isPublic: false,
 });
 
 
@@ -553,6 +570,7 @@ function handleEditRecipe() {
     link: recipe.value.link || "",
     image: recipe.value.image || "",
     ingredientsText: ingredientsText,
+    isPublic: (typeof recipe.value.isPublic === 'boolean') ? recipe.value.isPublic : (recipe.value.public ?? false),
   };
   showEditModal.value = true;
 }
@@ -598,6 +616,15 @@ async function submitEdit() {
         await setImage(token.value, recipe.value._id, editForm.value.image);
       } else {
         await deleteImage(token.value, recipe.value._id);
+      }
+    }
+    // Update visibility if changed
+    const originalIsPublic = (typeof recipe.value.isPublic === 'boolean') ? recipe.value.isPublic : (recipe.value.public ?? false);
+    if (editForm.value.isPublic !== originalIsPublic) {
+      try {
+        await setRecipePublic(token.value, recipe.value._id, Boolean(editForm.value.isPublic));
+      } catch (err) {
+        console.error('Failed to update recipe visibility:', err);
       }
     }
     
@@ -724,7 +751,8 @@ async function handleRecipeSubmit(recipeData) {
       token.value,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined
+      recipeData.description?.trim() || undefined,
+      Boolean(recipeData.isPublic)
     );
 
     // Set image separately if provided
