@@ -14,7 +14,7 @@
   overflow-x: hidden;
   z-index: 1000;
   box-sizing: border-box;
-  
+
   // Ensure all children respect width
   > * {
     max-width: 100%;
@@ -31,6 +31,8 @@
 }
 
 .sidebar-title {
+  margin-bottom: 2rem;
+
   h1 {
     margin: 0;
     font-size: 2rem;

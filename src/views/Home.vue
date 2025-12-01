@@ -5,20 +5,14 @@
 
     <!-- All Recipes Section -->
     <section v-else class="recipes-section">
-      <h3>All Recipes ({{ filteredRecipes.length }})</h3>
-      <div
-        v-if="filteredRecipes.length === 0 && allRecipes.length === 0"
-        class="empty-state"
-      >
+      <h3>All Recipes ({{ allRecipes.length }})</h3>
+      <div v-if="allRecipes.length === 0" class="empty-state">
         No recipes found. Create one to get started!
-      </div>
-      <div v-else-if="filteredRecipes.length === 0" class="empty-state">
-        No recipes match your search criteria.
       </div>
       <div v-else class="recipes-grid">
         <RecipeDisplay
-          v-for="recipe in filteredRecipes"
-          :key="recipe._id"
+          v-for="(recipe, index) in allRecipes"
+          :key="`${recipe._id}-${index}`"
           :recipe="recipe"
           @click="onRecipeClick"
         />
@@ -61,7 +55,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useAuth } from "../composables/useAuth.js";
 import { useAppSearch } from "../composables/useAppSearch.js";
@@ -81,6 +75,8 @@ import {
   setImage,
   getAllRecipesGlobal,
   searchRecipes,
+  findRecipeByIngredient,
+  filterIngredientAndSearch,
 } from "../api/Recipe.js";
 import { addItemToCollection } from "../api/Collecting.js";
 import LoginPopup from "../components/LoginPopup.vue";
@@ -92,58 +88,77 @@ const showLogin = ref(false);
 const allRecipes = ref([]);
 const isLoading = ref(false);
 
-// Computed filtered recipes
-const filteredRecipes = computed(() => {
-  let recipes = allRecipes.value;
+// Watch for filter changes and fetch filtered results from backend
+watch(
+  [searchQuery, ingredientFilters],
+  async ([newQuery, newFilters]) => {
+    await fetchFilteredRecipes();
+  },
+  { deep: true }
+);
 
-  // Filter by search query (recipe title)
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
-    recipes = recipes.filter((recipe) =>
-      recipe.title?.toLowerCase().includes(query)
-    );
-  }
+async function fetchFilteredRecipes() {
+  isLoading.value = true;
+  try {
+    const hasQuery = searchQuery.value?.trim();
+    const hasFilters = ingredientFilters.value.length > 0;
 
-  // Filter by ingredients
-  if (ingredientFilters.value.length > 0) {
-    recipes = recipes.filter((recipe) => {
-      // Check if recipe has all the filtered ingredients
-      return ingredientFilters.value.every((filterIngredient) => {
-        const filterLower = filterIngredient.toLowerCase();
-        return recipe.ingredients?.some((ingredient) =>
-          ingredient.name?.toLowerCase().includes(filterLower)
-        );
+    let recipes = [];
+
+    // Case 1: Both search query AND ingredient filters
+    if (hasQuery && hasFilters) {
+      console.log("Filtering with both query and ingredients:", {
+        query: searchQuery.value,
+        ingredients: ingredientFilters.value,
       });
-    });
-  }
+      recipes = await filterIngredientAndSearch(
+        searchQuery.value.trim(),
+        ingredientFilters.value
+      );
+    }
+    // Case 2: Only search query (no ingredient filters)
+    else if (hasQuery) {
+      console.log("Searching recipes with query:", searchQuery.value);
+      recipes = await searchRecipes(searchQuery.value.trim());
+    }
+    // Case 3: Only ingredient filters (no search query)
+    else if (hasFilters) {
+      console.log("Filtering by ingredients:", ingredientFilters.value);
+      recipes = await findRecipeByIngredient(ingredientFilters.value);
+    }
+    // Case 4: No filters at all
+    else {
+      console.log("Fetching all recipes (no filters)");
+      recipes = await getAllRecipesGlobal();
+    }
 
-  return recipes;
-});
+    // Preserve order from backend - assign as new array to trigger reactivity
+    allRecipes.value = [...(recipes || [])];
+
+    console.log("Filtered recipes count:", allRecipes.value.length);
+    console.log(
+      "First 3 recipe titles (in order):",
+      allRecipes.value.slice(0, 3).map((r) => r.title)
+    );
+  } catch (error) {
+    console.error("Failed to fetch filtered recipes:", error);
+    allRecipes.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+}
 
 onMounted(async () => {
   setTitle("home");
   setBreadcrumbs([]);
   setActions([]);
   await init();
-  await fetchAllRecipes();
+  await fetchFilteredRecipes();
 });
 
 async function fetchAllRecipes() {
-  isLoading.value = true;
-  try {
-    console.log("Calling getAllRecipesGlobal...");
-    const recipes = await getAllRecipesGlobal();
-    allRecipes.value = recipes || [];
-    console.log("Fetched all recipes:", allRecipes.value);
-    console.log("Number of recipes:", allRecipes.value.length);
-  } catch (error) {
-    console.error("Failed to fetch recipes:", error);
-    console.error("Error details:", error.message);
-    // Set empty array on error so page still renders
-    allRecipes.value = [];
-  } finally {
-    isLoading.value = false;
-  }
+  // Redirect to the new unified function
+  await fetchFilteredRecipes();
 }
 
 async function handleLogout() {
@@ -297,39 +312,14 @@ function handleCollectionSubmit(collectionData) {
 
 async function handleRecipeSearch(query) {
   console.log("Home - handleRecipeSearch received query:", query);
-  console.log("Query type:", typeof query, "Query length:", query?.length);
   searchQuery.value = query;
-
-  // If search query is empty or too short, fetch all recipes
-  if (!query || !query.trim()) {
-    console.log("Empty query, fetching all recipes");
-    await fetchAllRecipes();
-    return;
-  }
-
-  // Trim the query
-  const trimmedQuery = query.trim();
-
-  // Call API to search by title
-  console.log("Calling searchRecipes API with:", trimmedQuery);
-  isLoading.value = true;
-  try {
-    const recipes = await searchRecipes(trimmedQuery);
-    allRecipes.value = recipes || [];
-    console.log("Search results:", allRecipes.value.length, "recipes found");
-  } catch (error) {
-    console.error("Failed to search recipes:", error);
-    // On error, show empty results instead of crashing
-    allRecipes.value = [];
-    alert(`Search failed: ${error.message}`);
-  } finally {
-    isLoading.value = false;
-  }
+  // Watch will trigger fetchFilteredRecipes automatically
 }
 
 function handleIngredientFilter(ingredients) {
   console.log("Filter by ingredients:", ingredients);
   ingredientFilters.value = ingredients;
+  // Watch will trigger fetchFilteredRecipes automatically
 }
 
 function handleProfileClick() {

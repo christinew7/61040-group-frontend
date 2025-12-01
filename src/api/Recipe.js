@@ -19,7 +19,7 @@ export async function createRecipe(
   title,
   link = null,
   description = null,
-  isPublic = false,
+  isPublic = false
 ) {
   if (typeof token !== "string") throw new TypeError("Token is required.");
   if (typeof title !== "string") throw new TypeError("Title is required.");
@@ -481,10 +481,11 @@ export async function setRecipePublic(token, recipeId, isPublic) {
     await api.post("/setRecipePublic", { token, recipe: recipeId, isPublic });
     return true;
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to set recipe visibility.");
+    throw new Error(
+      err.response?.data?.error || "Failed to set recipe visibility."
+    );
   }
 }
-
 
 // /**
 //  * @route POST api/Recipe/setRecipePublic
@@ -585,5 +586,95 @@ export async function search(query) {
     return result[0]?.recipes || [];
   } catch (err) {
     throw new Error(err.response?.data?.error || err.message);
+  }
+}
+
+/**
+ * @route POST api/Recipe/_findRecipeByIngredient
+ * @desc Find recipes that contain the specified ingredients, sorted by match count
+ * @param {string[]} ingredients - Array of ingredient names to search for
+ * @returns {Promise<Array>} Array of matching RecipeDoc objects
+ */
+export async function findRecipeByIngredient(ingredients) {
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    throw new TypeError("Ingredients must be a non-empty array.");
+  }
+
+  try {
+    console.log("findRecipeByIngredient called with:", ingredients);
+    const response = await api.post("/_findRecipeByIngredient", {
+      ingredients,
+    });
+    console.log("findRecipeByIngredient response:", response.data);
+
+    // Handle empty or invalid response
+    if (!response.data) {
+      return [];
+    }
+
+    // Backend returns [{ recipes: [...] }] or [{ error: "..." }]
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].recipes || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("findRecipeByIngredient error:", err);
+    throw new Error(
+      err.response?.data?.error ||
+        err.message ||
+        "Failed to find recipes by ingredient."
+    );
+  }
+}
+
+/**
+ * @route POST api/Recipe/_filterIngredientAndSearch
+ * @desc Search recipes by title AND filter by ingredients
+ * @param {string} query - Search query for recipe title
+ * @param {string[]} ingredients - Array of ingredient names to filter by
+ * @returns {Promise<Array>} Array of matching RecipeDoc objects
+ */
+export async function filterIngredientAndSearch(query, ingredients) {
+  if (typeof query !== "string" || query.trim().length === 0) {
+    throw new TypeError("Query is required.");
+  }
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    throw new TypeError("Ingredients must be a non-empty array.");
+  }
+
+  try {
+    console.log("filterIngredientAndSearch called with:", {
+      query,
+      ingredients,
+    });
+    const response = await api.post("/_filterIngredientAndSearch", {
+      query,
+      ingredients,
+    });
+    console.log("filterIngredientAndSearch response:", response.data);
+
+    // Handle empty or invalid response
+    if (!response.data) {
+      return [];
+    }
+
+    // Backend returns [{ recipes: [...] }] or [{ error: "..." }]
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].recipes || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("filterIngredientAndSearch error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to filter recipes."
+    );
   }
 }

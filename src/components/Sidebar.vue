@@ -7,8 +7,9 @@
 
     <!-- Navigation Links -->
     <div class="profile-section">
-      <div class="profile-label" @click="handleHomeClick">Home</div>
-      <div v-if="isLoggedIn" class="profile-label" @click="handleProfileClick">My Profile</div>
+      <div v-if="isLoggedIn" class="profile-label" @click="handleProfileClick">
+        My Profile
+      </div>
     </div>
 
     <!-- Action Buttons (always visible) -->
@@ -64,7 +65,11 @@
       <!-- Pre-defined Ingredient Catalog -->
       <div class="chips-catalog">
         <h4 class="catalog-heading">Ingredient Library</h4>
-        <div v-for="category in categories" :key="category" class="chip-category">
+        <div
+          v-for="category in categories"
+          :key="category"
+          class="chip-category"
+        >
           <div class="category-name">{{ category }}</div>
           <div class="category-chips">
             <button
@@ -104,7 +109,7 @@ const emit = defineEmits([
   "ingredient-filter-change",
   "profile-click",
   "home-click",
-  "sign-in"
+  "sign-in",
 ]);
 
 const { isLoggedIn } = useAuth();

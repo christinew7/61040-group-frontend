@@ -76,7 +76,7 @@ import {
   parseIngredients,
   setImage,
   getAllMyRecipes,
-  setRecipePublic
+  setRecipePublic,
 } from "./api/Recipe.js";
 import "./utils/app.css";
 
@@ -207,7 +207,7 @@ async function handleRecipeSubmit(recipeData) {
       recipeData.name,
       recipeData.link?.trim() || undefined,
       recipeData.description?.trim() || undefined,
-      recipeData.isPublic || false,
+      recipeData.isPublic || false
     );
 
     // Set image separately if provided
@@ -279,17 +279,16 @@ async function handleParsedRecipeSubmit(submissionData) {
         console.error("Failed to set image:", error);
       }
     }
-    
-    if (typeof isPublic === "boolean") {
-        try {
-            // Assuming there's an API function to set the public flag
-            await setRecipePublic(authToken, parsedRecipeId, isPublic);
-            console.log("Public flag set successfully");
-        } catch (error) {
-            console.error("Failed to set public flag:", error);
-        }
-        }
 
+    if (typeof isPublic === "boolean") {
+      try {
+        // Assuming there's an API function to set the public flag
+        await setRecipePublic(authToken, parsedRecipeId, isPublic);
+        console.log("Public flag set successfully");
+      } catch (error) {
+        console.error("Failed to set public flag:", error);
+      }
+    }
 
     // Add to collection if selected
     if (collection && parsedRecipeId) {
@@ -306,8 +305,8 @@ async function handleParsedRecipeSubmit(submissionData) {
 
     // Force refresh the current view
     setTimeout(() => {
-        router.go(0);
-      }, 1500);
+      router.go(0);
+    }, 1500);
   } catch (error) {
     console.error("Failed to update parsed recipe:", error);
     showError(`Failed to update recipe: ${error.message}`);
