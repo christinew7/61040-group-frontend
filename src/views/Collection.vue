@@ -242,54 +242,32 @@ async function fetchCollectionDetails() {
     console.log("Collection member IDs:", memberIds);
 
     // Fetch member details if we have member IDs
+    // Fetch member details if we have member IDs
     if (memberIds.length > 0) {
-      // TODO: Backend bug - getProfile returns current user's profile for all userIds
-      // For now, just use the user IDs directly
-      members.value = memberIds.map((id) => ({
-        userId: id,
-        displayName: null, // Will show userId instead
-      }));
-      console.log(
-        "Using member IDs directly (backend not returning correct profiles):",
-        members.value
-      );
-
-      /* Disabled until backend is fixed to return correct profiles
       const memberDetails = await Promise.all(
         memberIds.map(async (memberId) => {
           try {
-            console.log(
-              "Fetching profile for member ID:",
-              memberId,
-              "Type:",
-              typeof memberId
-            );
             // If it's already an object with displayName, return it
             if (typeof memberId === "object" && memberId.displayName) {
-              console.log("Member already has displayName:", memberId);
               return memberId;
             }
-            // Otherwise fetch user profile
-            const userProfile = await getProfileByUserId(authToken, memberId);
-            console.log("Fetched profile for", memberId, ":", userProfile);
-            return userProfile;
-          } catch (error) {
-            console.error(
-              `Failed to fetch info for member ${memberId}:`,
-              error
-            );
-            // Return a fallback object
+            // Fetch user profile using public passthrough (no token needed)
+            const profile = await getProfileByUserId(memberId);
             return {
               userId: memberId,
-              displayName: `User (${memberId.substring(0, 8)}...)`,
+              displayName: profile?.displayName || null,
+            };
+          } catch (error) {
+            console.error(`Failed to fetch profile for ${memberId}:`, error);
+            return {
+              userId: memberId,
+              displayName: null,
             };
           }
         })
       );
       members.value = memberDetails;
       console.log("Fetched member details:", members.value);
-      console.log("First member:", members.value[0]);
-      */
     } else {
       members.value = [];
     }

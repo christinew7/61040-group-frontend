@@ -112,36 +112,36 @@ export async function getProfile(token) {
 }
 
 /**
- * @route POST api/Profile/getProfile
- * @desc Get user profile by userId.
+ * @route POST api/Profile/_getProfile
+ * @desc Get user profile by userId (public passthrough).
  * @returns {Promise<{userId: string, displayName: string}>}
  */
-export async function getProfileByUserId(token, userId) {
-  if (typeof token !== "string") {
-    throw new TypeError("Token is required.");
-  }
+export async function getProfileByUserId(userId) {
   if (typeof userId !== "string") {
     throw new TypeError("User ID is required.");
   }
 
   try {
-    const response = await profileApi.post("/getProfile", { token, userId });
+    const response = await profileApi.post("/_getProfile", { userId });
 
     console.log("getProfileByUserId response for", userId, ":", response.data);
 
-    // Backend returns { profile: {...} } or { error: "..." }
     const result = response.data;
 
+    // Handle error response
     if (result.error) {
       throw new Error(result.error);
     }
 
-    if (result.profile) {
-      return result.profile;
+    // _getProfile returns: [{ profile: {...} }]
+    if (Array.isArray(result) && result.length > 0) {
+      if (result[0].error) {
+        throw new Error(result[0].error);
+      }
+      return result[0].profile || result[0];
     }
 
-    console.error("Unexpected response format:", result);
-    throw new Error("Invalid response format from server");
+    return result;
   } catch (err) {
     if (err.message && !err.response) {
       throw err;
