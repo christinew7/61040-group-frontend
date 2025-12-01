@@ -115,6 +115,17 @@
       ✗ {{ errorMessage }}
     </div>
 
+    <!-- Confirmation Popup -->
+    <ConfirmationPopup
+      :isOpen="showConfirmPopup"
+      :title="confirmPopupConfig.title"
+      :message="confirmPopupConfig.message"
+      :confirmText="confirmPopupConfig.confirmText"
+      :cancelText="confirmPopupConfig.cancelText"
+      @confirm="confirmPopupConfig.onConfirm"
+      @close="closeConfirmPopup"
+    />
+
   </div>
 </template>
 
@@ -131,6 +142,7 @@ import {
   addItemToCollection,
   deleteCollection,
   addMemberToCollection,
+  leaveCollection,
 } from "../api/Collecting.js";
 import {
   createRecipe,
@@ -142,6 +154,7 @@ import {
 import { getProfileByUserId } from "../api/User.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useHeader } from "../composables/useHeader.js";
+import ConfirmationPopup from "../components/ConfirmationPopup.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -168,6 +181,16 @@ const isAddCollectionPopupOpen = ref(false);
 const isAddMemberDialogOpen = ref(false);
 const isMembersDropdownOpen = ref(false);
 const newMemberEmail = ref("");
+
+// Confirmation popup state
+const showConfirmPopup = ref(false);
+const confirmPopupConfig = ref({
+  title: "",
+  message: "",
+  confirmText: "",
+  cancelText: "Cancel",
+  onConfirm: () => {},
+});
 
 // Collections data for recipe popup
 const userCollections = ref([]);
@@ -321,9 +344,17 @@ async function fetchCollectionDetails() {
     ];
 
     if (isOwner.value) {
+      // Owner can delete
       actions.push({
         label: "Delete Collection",
         onClick: handleDeleteCollection,
+        variant: "danger",
+      });
+    } else {
+      // Non-owner can leave
+      actions.push({
+        label: "Leave Collection",
+        onClick: handleLeaveCollection,
         variant: "danger",
       });
     }
@@ -391,23 +422,58 @@ async function handleAddMember() {
   }
 }
 
-async function handleDeleteCollection() {
-  const confirmed = confirm(
-    `Are you sure you want to delete "${collectionName.value}"? This action cannot be undone.`
-  );
+function handleDeleteCollection() {
+  confirmPopupConfig.value = {
+    title: "Delete Collection",
+    message: `Are you sure you want to delete "${collectionName.value}"? This action cannot be undone.`,
+    confirmText: "Delete",
+    cancelText: "Cancel",
+    onConfirm: confirmDeleteCollection,
+  };
+  showConfirmPopup.value = true;
+}
 
-  if (!confirmed) return;
-
+async function confirmDeleteCollection() {
   try {
-    const authToken = getToken();
-    await deleteCollection(authToken, collectionId.value);
+    await deleteCollection(token.value, collectionId.value);
     showSuccess(`Collection "${collectionName.value}" has been deleted.`);
-    // Navigate back to profile page
-    router.push("/profile");
+    
+    setTimeout(() => {
+      router.push("/profile");
+    }, 1500);
   } catch (error) {
     console.error("Failed to delete collection:", error);
-    showError(`Failed to delete collection: ${error.message}`);;
+    showError(`Failed to delete collection: ${error.message}`);
   }
+}
+
+function handleLeaveCollection() {
+  confirmPopupConfig.value = {
+    title: "Leave Collection",
+    message: `Are you sure you want to leave "${collectionName.value}"?`,
+    confirmText: "Leave",
+    cancelText: "Cancel",
+    onConfirm: confirmLeaveCollection,
+  };
+  showConfirmPopup.value = true;
+}
+
+async function confirmLeaveCollection() {
+  try {
+    await leaveCollection(token.value, collectionId.value);
+    showSuccess(`You have left "${collectionName.value}"`);
+    
+    setTimeout(() => {
+      router.push("/profile");
+    }, 1500);
+  } catch (error) {
+    console.error("Failed to leave collection:", error);
+    showError(`Failed to leave collection: ${error.message}`);
+  }
+}
+
+function closeConfirmPopup() {
+  showConfirmPopup.value = false;
 }
 
 async function handleLogout() {
@@ -526,7 +592,7 @@ function closeAddCollectionPopup() {
 
 function handleCollectionSubmit(collectionData) {
   console.log("Collection submitted:", collectionData);
-  alert(`Collection "${collectionData.name}" created successfully!`);
+  showSuccess(`Collection "${collectionData.name}" created successfully!`);
 }
 
 // Helper functions for member display
@@ -856,7 +922,6 @@ function getMemberUserId(member) {
 }
 
 /* Short term success/error message */
-
 .message {
   position: fixed;
   bottom: 2rem;
@@ -878,5 +943,16 @@ function getMemberUserId(member) {
 .error-message {
   background: #dc2626;
   color: white;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

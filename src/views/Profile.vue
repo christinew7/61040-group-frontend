@@ -114,6 +114,15 @@
         @close="closeDeleteConfirm"
       />
     </div>
+    <!-- Success Message -->
+    <div v-if="showSuccessMessage" class="message success-message">
+      ✓ {{ successMessage }}
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="showErrorMessage" class="message error-message">
+      ✗ {{ errorMessage }}
+    </div>
   </div>
 </template>
 
@@ -165,6 +174,28 @@ const collectionsError = ref(null);
 const userRecipes = ref([]);
 const isLoadingRecipes = ref(false);
 const recipesError = ref(null);
+
+// Success/Error messages
+const showSuccessMessage = ref(false);
+const successMessage = ref("");
+const showErrorMessage = ref(false);
+const errorMessage = ref("");
+
+function showSuccess(message) {
+  successMessage.value = message;
+  showSuccessMessage.value = true;
+  setTimeout(() => {
+    showSuccessMessage.value = false;
+  }, 3000);
+}
+
+function showError(message) {
+  errorMessage.value = message;
+  showErrorMessage.value = true;
+  setTimeout(() => {
+    showErrorMessage.value = false;
+  }, 5000);
+}
 
 onMounted(async () => {
   setTitle("my profile");
@@ -295,7 +326,7 @@ async function confirmDeleteAccount() {
 
     // Close popup and show error inline
     isDeleteConfirmOpen.value = false;
-    alert(`Failed to delete account: ${error.message}`);
+    showError(`Failed to delete account: ${error.message}`);
   }
 }
 
@@ -400,10 +431,10 @@ async function handleRecipeSubmit(recipeData) {
     // Refresh recipes list
     await fetchRecipes();
 
-    alert(`Recipe "${recipeData.name}" created successfully!`);
+    showSuccess(`Recipe "${recipeData.name}" created successfully!`);
   } catch (error) {
     console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
+    showError(`Failed to create recipe: ${error.message}`);
   }
 }
 
@@ -491,10 +522,10 @@ async function handleCollectionSubmit(collectionData) {
     // Refresh the collections list
     await fetchCollections();
 
-    alert(`Collection "${collectionData.name}" created successfully!`);
+    showSuccess(`Collection "${collectionData.name}" created successfully!`);
   } catch (error) {
     console.error("Failed to create collection:", error);
-    alert(`Failed to create collection: ${error.message}`);
+    showError(`Failed to create collection: ${error.message}`);
   }
 }
 
@@ -742,5 +773,40 @@ function handleHomeClick() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
+}
+
+/* success/error message */
+.message {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+  z-index: 1000;
+}
+
+.success-message {
+  background: #059669;
+  color: white;
+}
+
+.error-message {
+  background: #dc2626;
+  color: white;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

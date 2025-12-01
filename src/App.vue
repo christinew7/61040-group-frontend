@@ -42,6 +42,16 @@
       @close="showLogin = false"
       @success="onLoginSuccess"
     />
+
+    <!-- Success Message -->
+    <div v-if="showSuccessMessage" class="message success-message">
+      ✓ {{ successMessage }}
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="showErrorMessage" class="message error-message">
+      ✗ {{ errorMessage }}
+    </div>
   </div>
 </template>
 
@@ -81,6 +91,28 @@ const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
 const userCollections = ref([]);
 const userRecipes = ref([]);
+
+// Success/Error messages
+const showSuccessMessage = ref(false);
+const successMessage = ref("");
+const showErrorMessage = ref(false);
+const errorMessage = ref("");
+
+function showSuccess(message) {
+  successMessage.value = message;
+  showSuccessMessage.value = true;
+  setTimeout(() => {
+    showSuccessMessage.value = false;
+  }, 3000);
+}
+
+function showError(message) {
+  errorMessage.value = message;
+  showErrorMessage.value = true;
+  setTimeout(() => {
+    showErrorMessage.value = false;
+  }, 5000);
+}
 
 // Show search only on Home page
 const shouldShowSearch = computed(() => route.name === "Home");
@@ -218,22 +250,18 @@ async function handleRecipeSubmit(recipeData) {
       }
     }
 
-    alert(`Recipe "${recipeData.name}" created successfully!`);
+    showSuccess(`Recipe "${recipeData.name}" created successfully!`);
 
-    // Refresh recipes and collections
-    await fetchRecipes();
-    await fetchCollections();
-
-    // Force refresh the current view if on profile page
-    if (route.name === "Profile") {
-      router.go(0); // Reload the current route
-    }
+    // Force refresh the current view
+    setTimeout(() => {
+      router.go(0);
+    }, 1500);
 
     // If on a collection or home page, we might want to refresh the view
     // For now, just navigating to the new recipe or staying put is fine
   } catch (error) {
     console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
+    showError(`Failed to create recipe: ${error.message}`);
   }
 }
 
@@ -274,19 +302,15 @@ async function handleParsedRecipeSubmit(submissionData) {
       }
     }
 
-    alert("Recipe created successfully from link!");
+    showSuccess("Recipe created successfully from link!");
 
-    // Refresh recipes and collections
-    await fetchRecipes();
-    await fetchCollections();
-
-    // Force refresh the current view if on profile page
-    if (route.name === "Profile") {
-      router.go(0); // Reload the current route
-    }
+    // Force refresh the current view
+    setTimeout(() => {
+        router.go(0);
+      }, 1500);
   } catch (error) {
     console.error("Failed to update parsed recipe:", error);
-    alert(`Failed to update recipe: ${error.message}`);
+    showError(`Failed to update recipe: ${error.message}`);
   }
 }
 
@@ -334,12 +358,13 @@ async function handleCollectionSubmit(collectionData) {
       }
     }
 
-    await fetchCollections();
-    await fetchRecipes();
-    alert(`Collection "${collectionData.name}" created successfully!`);
+    showSuccess(`Collection "${collectionData.name}" created successfully!`);
+    setTimeout(() => {
+      router.go(0);
+    }, 1500);
   } catch (error) {
     console.error("Failed to create collection:", error);
-    alert(`Failed to create collection: ${error.message}`);
+    showError(`Failed to create collection: ${error.message}`);
   }
 }
 </script>
@@ -356,5 +381,40 @@ async function handleCollectionSubmit(collectionData) {
   width: 0;
   margin-left: 260px; /* account for fixed sidebar width */
   background: var(--app-main-content-background);
+}
+
+/* short term success/error messages */
+.message {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+  z-index: 9999;
+}
+
+.success-message {
+  background: #059669;
+  color: white;
+}
+
+.error-message {
+  background: #dc2626;
+  color: white;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

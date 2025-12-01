@@ -124,6 +124,16 @@
       @close="showLogin = false"
       @success="onLoginSuccess"
     />
+
+    <!-- Success Message -->
+    <div v-if="showSuccessMessage" class="message success-message">
+      ✓ {{ successMessage }}
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="showErrorMessage" class="message error-message">
+      ✗ {{ errorMessage }}
+    </div>
   </div>
 </template>
 
@@ -141,7 +151,6 @@ const { setTitle, setBreadcrumbs, setActions } = useHeader();
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
-import { getMyCollections } from "../api/Collecting.js";
 import {
   createRecipe,
   parseIngredients,
@@ -150,7 +159,12 @@ import {
   searchRecipes,
   getAllMyRecipes,
 } from "../api/Recipe.js";
-import { addItemToCollection } from "../api/Collecting.js";
+import { 
+  getMyCollections, 
+  addItemToCollection,
+  createCollection,      
+  addMemberToCollection
+} from "../api/Collecting.js";
 import LoginPopup from "../components/LoginPopup.vue";
 
 const { token, isLoggedIn, logout, init, user } = useAuth();
@@ -265,6 +279,28 @@ const filteredCollectionRecipes = computed(() => {
 
   return recipes;
 });
+
+// Success/Error messages
+const showSuccessMessage = ref(false);
+const successMessage = ref("");
+const showErrorMessage = ref(false);
+const errorMessage = ref("");
+
+function showSuccess(message) {
+  successMessage.value = message;
+  showSuccessMessage.value = true;
+  setTimeout(() => {
+    showSuccessMessage.value = false;
+  }, 3000);
+}
+
+function showError(message) {
+  errorMessage.value = message;
+  showErrorMessage.value = true;
+  setTimeout(() => {
+    showErrorMessage.value = false;
+  }, 5000);
+}
 
 onMounted(async () => {
   setTitle("home");
@@ -502,10 +538,50 @@ function closeAddCollectionPopup() {
   isAddCollectionPopupOpen.value = false;
 }
 
-function handleCollectionSubmit(collectionData) {
-  console.log("Collection submitted:", collectionData);
-  // Here you would typically send the data to your backend API
-  alert(`Collection "${collectionData.name}" created successfully!`);
+async function handleCollectionSubmit(collectionData) {
+  if (!token.value) {
+    showError("Please sign in to create a collection");
+    return;
+  }
+
+  try {
+    const newCollection = await createCollection(token.value, collectionData.name);
+
+    let collectionId;
+    if (typeof newCollection === "string") {
+      collectionId = newCollection;
+    } else {
+      collectionId = newCollection._id || newCollection.id;
+    }
+
+    if (!collectionId) {
+      throw new Error("Collection was created but no ID was returned");
+    }
+
+    // Add shared users
+    for (const email of (collectionData.sharedUsers || [])) {
+      try {
+        await addMemberToCollection(token.value, collectionId, email);
+      } catch (error) {
+        console.error(`Failed to add member ${email}:`, error);
+      }
+    }
+
+    // Add recipes
+    for (const recipeId of (collectionData.recipes || [])) {
+      try {
+        await addItemToCollection(token.value, collectionId, recipeId);
+      } catch (error) {
+        console.error(`Failed to add recipe ${recipeId}:`, error);
+      }
+    }
+
+    await fetchCollections();
+    showSuccess(`Collection "${collectionData.name}" created successfully!`);
+  } catch (error) {
+    console.error("Failed to create collection:", error);
+    showError(`Failed to create collection: ${error.message}`);
+  }
 }
 
 async function handleRecipeSearch(query) {
@@ -670,5 +746,39 @@ function onRecipeClick(recipe) {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
+}
+/* success/error message */
+.message {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideUp 0.3s ease-out;
+  z-index: 1000;
+}
+
+.success-message {
+  background: #059669;
+  color: white;
+}
+
+.error-message {
+  background: #dc2626;
+  color: white;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

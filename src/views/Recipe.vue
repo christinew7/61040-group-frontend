@@ -787,7 +787,7 @@ async function handleAddToCollection() {
     showCollectionModal.value = true;
   } catch (err) {
     console.error("Failed to load collections:", err);
-    alert(`Failed to load collections: ${err.message}`);
+    showError(`Failed to load collections: ${err.message}`);
   } finally {
     isLoadingCollections.value = false;
   }
@@ -829,7 +829,7 @@ function closeAddRecipePopup() {
 
 async function handleRecipeSubmit(recipeData) {
   if (!token.value) {
-    alert("Please sign in to create a recipe");
+    showError("Please sign in to create a recipe");
     return;
   }
 
@@ -883,16 +883,16 @@ async function handleRecipeSubmit(recipeData) {
       }
     }
 
-    alert(`Recipe "${recipeData.name}" created successfully!`);
+    showSuccess(`Recipe "${recipeData.name}" created successfully!`);
   } catch (error) {
     console.error("Failed to create recipe:", error);
-    alert(`Failed to create recipe: ${error.message}`);
+    showError(`Failed to create recipe: ${error.message}`);
   }
 }
 
 async function handleParsedRecipeSubmit(submissionData) {
   if (!token.value) {
-    alert("Please sign in to create a recipe");
+    showError("Please sign in to create a recipe");
     return;
   }
 
@@ -919,10 +919,10 @@ async function handleParsedRecipeSubmit(submissionData) {
       }
     }
 
-    alert("Recipe created successfully from link!");
+    showSuccess("Recipe created successfully from link!");
   } catch (error) {
     console.error("Failed to update parsed recipe:", error);
-    alert(`Failed to update recipe: ${error.message}`);
+    showError(`Failed to update recipe: ${error.message}`);
   }
 }
 
@@ -935,7 +935,7 @@ function closeAddCollectionPopup() {
 }
 
 function handleCollectionSubmit(collectionData) {
-  alert(`Collection "${collectionData.name}" created successfully!`);
+  showSuccess(`Collection "${collectionData.name}" created successfully!`);
 }
 
 function handleProfileClick() {
