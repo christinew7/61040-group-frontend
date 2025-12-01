@@ -3,62 +3,9 @@
     <!-- Loading State -->
     <div v-if="isLoading" class="loading-state">Loading recipes...</div>
 
-    <!-- Public Recipes Section -->
-    <!-- My Recipes (owner) -->
-    <section v-if="isLoggedIn" class="recipes-section">
-      <h3>My Recipes ({{ filteredMyRecipes.length }})</h3>
-      <div v-if="myRecipes.length === 0" class="empty-state">
-        You haven't created any recipes yet. Add one from the sidebar!
-      </div>
-      <div v-else-if="filteredMyRecipes.length === 0" class="empty-state">
-        No recipes match your search criteria.
-      </div>
-      <div v-else>
-        <div v-if="viewMode === 'grid'" class="recipes-grid">
-          <RecipeDisplay
-            v-for="recipe in filteredMyRecipes"
-            :key="recipe._id"
-            :recipe="recipe"
-            @click="onRecipeClick"
-          />
-        </div>
-        <div v-else class="recipes-row">
-          <div class="recipe-item" v-for="recipe in filteredMyRecipes" :key="recipe._id">
-            <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Recipes that are in the user's collections -->
-    <section v-if="isLoggedIn" class="recipes-section">
-      <h3>Recipes In My Collections ({{ filteredCollectionRecipes.length }})</h3>
-      <div v-if="collectionRecipes.length === 0" class="empty-state">
-        You don't have any recipes in your collections yet.
-      </div>
-      <div v-else-if="filteredCollectionRecipes.length === 0" class="empty-state">
-        No recipes match your search criteria.
-      </div>
-      <div v-else>
-        <div v-if="viewMode === 'grid'" class="recipes-grid">
-          <RecipeDisplay
-            v-for="recipe in filteredCollectionRecipes"
-            :key="recipe._id"
-            :recipe="recipe"
-            @click="onRecipeClick"
-          />
-        </div>
-        <div v-else class="recipes-row">
-          <div class="recipe-item" v-for="recipe in filteredCollectionRecipes" :key="recipe._id">
-            <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Public Recipes Section -->
-    <section class="recipes-section">
-      <h3>Public Recipes ({{ filteredRecipes.length }})</h3>
+    <!-- All Recipes Section -->
+    <section v-else class="recipes-section">
+      <h3>All Recipes ({{ filteredRecipes.length }})</h3>
       <div
         v-if="filteredRecipes.length === 0 && allRecipes.length === 0"
         class="empty-state"
@@ -68,29 +15,15 @@
       <div v-else-if="filteredRecipes.length === 0" class="empty-state">
         No recipes match your search criteria.
       </div>
-      <div v-else>
-        <div v-if="viewMode === 'grid'" class="recipes-grid">
-          <RecipeDisplay
-            v-for="recipe in filteredRecipes"
-            :key="recipe._id"
-            :recipe="recipe"
-            @click="onRecipeClick"
-          />
-        </div>
-        <div v-else class="recipes-row">
-          <div class="recipe-item" v-for="recipe in filteredRecipes" :key="recipe._id">
-            <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
-          </div>
-        </div>
+      <div v-else class="recipes-grid">
+        <RecipeDisplay
+          v-for="recipe in filteredRecipes"
+          :key="recipe._id"
+          :recipe="recipe"
+          @click="onRecipeClick"
+        />
       </div>
     </section>
-
-    <!-- Global view toggle -->
-    <div class="global-view-toggle">
-      <button class="view-toggle" @click="toggleViewMode">
-        {{ viewMode === 'grid' ? 'Horizontal' : 'Grid' }}
-      </button>
-    </div>
 
     <!-- Debug output
     <section class="debug-section">
@@ -124,16 +57,6 @@
       @close="showLogin = false"
       @success="onLoginSuccess"
     />
-
-    <!-- Success Message -->
-    <div v-if="showSuccessMessage" class="message success-message">
-      ✓ {{ successMessage }}
-    </div>
-
-    <!-- Error Message -->
-    <div v-if="showErrorMessage" class="message error-message">
-      ✗ {{ errorMessage }}
-    </div>
   </div>
 </template>
 
@@ -151,50 +74,27 @@ const { setTitle, setBreadcrumbs, setActions } = useHeader();
 import CollectionDisplay from "../components/CollectionDisplay.vue";
 import AddRecipePopup from "../components/AddRecipePopup.vue";
 import AddCollectionPopup from "../components/AddCollectionPopup.vue";
+import { getMyCollections } from "../api/Collecting.js";
 import {
   createRecipe,
   parseIngredients,
   setImage,
   getAllRecipesGlobal,
   searchRecipes,
-  getAllMyRecipes,
 } from "../api/Recipe.js";
-import { 
-  getMyCollections, 
-  addItemToCollection,
-  createCollection,      
-  addMemberToCollection
-} from "../api/Collecting.js";
+import { addItemToCollection } from "../api/Collecting.js";
 import LoginPopup from "../components/LoginPopup.vue";
 
-const { token, isLoggedIn, logout, init, user } = useAuth();
+const { token, isLoggedIn, logout, init } = useAuth();
 const showLogin = ref(false);
 
 // Recipes from API
-const allRecipes = ref([]); //global recipes
-const myRecipes = ref([]);
-const collectionRecipes = ref([]);
+const allRecipes = ref([]);
 const isLoading = ref(false);
 
-// Computed filtered global recipes
+// Computed filtered recipes
 const filteredRecipes = computed(() => {
   let recipes = allRecipes.value;
-
-  // Exclude recipes that belong to the current user (so they only appear in My Recipes)
-  if (isLoggedIn.value) {
-    const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
-    const collectionRecipesSet = new Set((collectionRecipes.value || []).map((r) => r._id));
-    const myOwnerId = user.value?.userId;
-    recipes = recipes.filter((r) => {
-      if (!r) return false;
-      // Exclude recipes the user owns (shown in My Recipes)
-      if (myRecipesSet.has(r._id)) return false;
-      // Exclude recipes that are already in the user's collections
-      if (collectionRecipesSet.has(r._id)) return false;
-      if (myOwnerId && r.owner === myOwnerId) return false;
-      return true;
-    });
-  }
 
   // Filter by search query (recipe title)
   if (searchQuery.value.trim()) {
@@ -220,115 +120,14 @@ const filteredRecipes = computed(() => {
   return recipes;
 });
 
-// Computed filtered my-recipes (apply same search/ingredient filters)
-const filteredMyRecipes = computed(() => {
-  let recipes = myRecipes.value;
-
-  // Filter by search query (recipe title)
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
-    recipes = recipes.filter((recipe) =>
-      recipe.title?.toLowerCase().includes(query)
-    );
-  }
-
-  // Filter by ingredients
-  if (ingredientFilters.value.length > 0) {
-    recipes = recipes.filter((recipe) => {
-      return ingredientFilters.value.every((filterIngredient) => {
-        const filterLower = filterIngredient.toLowerCase();
-        return recipe.ingredients?.some((ingredient) =>
-          ingredient.name?.toLowerCase().includes(filterLower)
-        );
-      });
-    });
-  }
-
-  return recipes;
-});
-
-// Computed filtered recipes that come from the user's collections
-const filteredCollectionRecipes = computed(() => {
-  let recipes = collectionRecipes.value || [];
-
-  // Filter out recipes in myRecipes to avoid duplicates
-  if (isLoggedIn.value) {
-    const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
-    recipes = recipes.filter((r) => !myRecipesSet.has(r._id));
-  }
-  
-  // Filter by search query (recipe title)
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
-    recipes = recipes.filter((recipe) =>
-      recipe.title?.toLowerCase().includes(query)
-    );
-  }
-
-  // Filter by ingredients
-  if (ingredientFilters.value.length > 0) {
-    recipes = recipes.filter((recipe) => {
-      return ingredientFilters.value.every((filterIngredient) => {
-        const filterLower = filterIngredient.toLowerCase();
-        return recipe.ingredients?.some((ingredient) =>
-          ingredient.name?.toLowerCase().includes(filterLower)
-        );
-      });
-    });
-  }
-
-  return recipes;
-});
-
-// Success/Error messages
-const showSuccessMessage = ref(false);
-const successMessage = ref("");
-const showErrorMessage = ref(false);
-const errorMessage = ref("");
-
-function showSuccess(message) {
-  successMessage.value = message;
-  showSuccessMessage.value = true;
-  setTimeout(() => {
-    showSuccessMessage.value = false;
-  }, 3000);
-}
-
-function showError(message) {
-  errorMessage.value = message;
-  showErrorMessage.value = true;
-  setTimeout(() => {
-    showErrorMessage.value = false;
-  }, 5000);
-}
-
 onMounted(async () => {
   setTitle("home");
   setBreadcrumbs([]);
   setActions([]);
   await init();
   await fetchAllRecipes();
-  if (isLoggedIn.value) {
-    await fetchMyRecipes();
-    await fetchCollections();
-  }
 });
 
-async function fetchMyRecipes() {
-  if (!isLoggedIn.value) return;
-  isLoading.value = true;
-  try {
-    const recipes = await getAllMyRecipes(token.value);
-    myRecipes.value = (recipes || []).reverse();
-  } catch (err) {
-    console.error("Failed to fetch my recipes:", err);
-    myRecipes.value = [];
-  } finally {
-    isLoading.value = false;
-  }
-}
-
-//Global recipes
 async function fetchAllRecipes() {
   isLoading.value = true;
   try {
@@ -359,13 +158,6 @@ function onLoginSuccess() {
 const isAddRecipePopupOpen = ref(false);
 const isAddCollectionPopupOpen = ref(false);
 
-// Global view mode for all sections: 'grid' or 'horizontal'
-const viewMode = ref("grid");
-
-function toggleViewMode() {
-  viewMode.value = viewMode.value === "grid" ? "horizontal" : "grid";
-}
-
 // Collections data
 const userCollections = ref([]);
 
@@ -374,34 +166,7 @@ async function fetchCollections() {
 
   try {
     const response = await getMyCollections(token.value);
-    userCollections.value = response || [];
-
-    // Aggregate recipe objects from the user's collections.
-    // Collections may include an `items` array with recipe objects or IDs.
-    const aggregated = [];
-    const seen = new Set();
-    (userCollections.value || []).forEach((col) => {
-      const items = col.items || col.recipes || [];
-      if (!Array.isArray(items)) return;
-      items.forEach((it) => {
-        // Item might be a recipe object or an id or wrapped object
-        let candidate = it;
-        if (candidate && candidate.recipe) candidate = candidate.recipe;
-        const id = (candidate && (candidate._id || candidate.id)) || (typeof candidate === 'string' ? candidate : null);
-        if (!id) return;
-        if (seen.has(id)) return;
-        seen.add(id);
-        // If we only have an id, try to find the full recipe in fetched lists
-        if (typeof candidate === 'string') {
-          const found = (allRecipes.value || []).find((r) => r._id === candidate) || (myRecipes.value || []).find((r) => r._id === candidate);
-          if (found) aggregated.push(found);
-        } else {
-          aggregated.push(candidate);
-        }
-      });
-    });
-
-    collectionRecipes.value = aggregated;
+    userCollections.value = response;
   } catch (error) {
     console.error("Failed to fetch collections:", error);
   }
@@ -428,7 +193,7 @@ async function handleRecipeSubmit(recipeData) {
       token.value,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
+      recipeData.description?.trim() || undefined
     );
     console.log("Recipe created with ID:", recipeId);
 
@@ -442,16 +207,6 @@ async function handleRecipeSubmit(recipeData) {
       }
     }
 
-    // Set isPublic flag separately if provided
-    if (typeof recipeData.isPublic === "boolean") {
-      try {
-        // Assuming there's an API function to set the public flag
-        await setRecipePublic(token.value, recipeId, recipeData.isPublic);
-        console.log("Public flag set successfully");
-      } catch (error) {
-        console.error("Failed to set public flag:", error);
-      }
-    }
     // Add ingredients if provided
     if (recipeData.ingredientsText && recipeData.ingredientsText.trim()) {
       try {
@@ -471,8 +226,6 @@ async function handleRecipeSubmit(recipeData) {
       try {
         await addItemToCollection(token.value, recipeData.collection, recipeId);
         console.log(`Added recipe to collection: ${recipeData.collection}`);
-        // Refresh collections so the "Recipes In My Collections" section updates
-        await fetchCollections();
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
       }
@@ -512,8 +265,6 @@ async function handleParsedRecipeSubmit(submissionData) {
       try {
         await addItemToCollection(token.value, collection, parsedRecipeId);
         console.log(`Added recipe to collection: ${collection}`);
-        // Refresh collections so the collection recipes list updates
-        await fetchCollections();
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
       }
@@ -538,50 +289,10 @@ function closeAddCollectionPopup() {
   isAddCollectionPopupOpen.value = false;
 }
 
-async function handleCollectionSubmit(collectionData) {
-  if (!token.value) {
-    showError("Please sign in to create a collection");
-    return;
-  }
-
-  try {
-    const newCollection = await createCollection(token.value, collectionData.name);
-
-    let collectionId;
-    if (typeof newCollection === "string") {
-      collectionId = newCollection;
-    } else {
-      collectionId = newCollection._id || newCollection.id;
-    }
-
-    if (!collectionId) {
-      throw new Error("Collection was created but no ID was returned");
-    }
-
-    // Add shared users
-    for (const email of (collectionData.sharedUsers || [])) {
-      try {
-        await addMemberToCollection(token.value, collectionId, email);
-      } catch (error) {
-        console.error(`Failed to add member ${email}:`, error);
-      }
-    }
-
-    // Add recipes
-    for (const recipeId of (collectionData.recipes || [])) {
-      try {
-        await addItemToCollection(token.value, collectionId, recipeId);
-      } catch (error) {
-        console.error(`Failed to add recipe ${recipeId}:`, error);
-      }
-    }
-
-    await fetchCollections();
-    showSuccess(`Collection "${collectionData.name}" created successfully!`);
-  } catch (error) {
-    console.error("Failed to create collection:", error);
-    showError(`Failed to create collection: ${error.message}`);
-  }
+function handleCollectionSubmit(collectionData) {
+  console.log("Collection submitted:", collectionData);
+  // Here you would typically send the data to your backend API
+  alert(`Collection "${collectionData.name}" created successfully!`);
 }
 
 async function handleRecipeSearch(query) {
@@ -646,8 +357,9 @@ function onRecipeClick(recipe) {
 <style scoped>
 .home-view {
   flex: 1;
-  max-width: 1200px;
+  width: 100%;
   padding: 2rem;
+  background: var(--app-main-content-background);
 }
 
 .debug-section {
@@ -693,51 +405,6 @@ function onRecipeClick(recipe) {
   margin-bottom: 2rem;
 }
 
-/* Horizontal scroll layout */
-.recipes-row {
-  display: flex;
-  gap: 1.5rem;
-  overflow-x: auto;
-  padding: 0.75rem;
-  margin-bottom: 1rem;
-  border: 1px solid rgba(15,23,42,0.06);
-  background: rgba(255,255,255,0.9);
-  border-radius: 8px;
-}
-
-.recipe-item {
-  flex: 0 0 320px; /* show ~3-4 items depending on container width */
-  border: none;
-  background: transparent;
-}
-
-.recipes-row::-webkit-scrollbar {
-  height: 10px;
-}
-.recipes-row::-webkit-scrollbar-thumb {
-  background: rgba(15,23,42,0.15);
-  border-radius: 8px;
-}
-.global-view-toggle {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 1rem;
-  width: 100%;
-}
-.view-toggle {
-  margin-left: 0.75rem;
-  font-size: 0.85rem;
-  padding: 0.25rem 0.5rem;
-  /* border-radius: 6px; */
-  border: none;
-  background: transparent;
-  color: lightgray;
-  /* cursor: pointer; */
-}
-.view-toggle:hover {
-  background: #f3f4f6;
-}
-
 .empty-state {
   text-align: center;
   color: #6b7280;
@@ -746,39 +413,5 @@ function onRecipeClick(recipe) {
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-}
-/* success/error message */
-.message {
-  position: fixed;
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 1rem 2rem;
-  border-radius: 8px;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideUp 0.3s ease-out;
-  z-index: 1000;
-}
-
-.success-message {
-  background: #059669;
-  color: white;
-}
-
-.error-message {
-  background: #dc2626;
-  color: white;
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
 }
 </style>

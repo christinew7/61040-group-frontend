@@ -1,5 +1,5 @@
 .sidebar {
-  width: var(--sidebar-width);
+  width: 260px;
   position: fixed;
   top: 0;
   left: 0;
@@ -9,10 +9,17 @@
   border-right: 1px solid var(--sidebar-border-color);
   display: flex;
   flex-direction: column;
-  flex: 0 0 var(--sidebar-width);
   padding: 1rem;
   overflow-y: auto;
+  overflow-x: hidden;
   z-index: 1000;
+  box-sizing: border-box;
+  
+  // Ensure all children respect width
+  > * {
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
 }
 
 .sidebar-content {
@@ -112,11 +119,14 @@
 }
 
 .search-input {
+  width: 100%;
+  max-width: 100%;
   padding: 0.625rem 0.75rem;
   border: 1px solid var(--input-border-color);
   border-radius: 6px;
   font-size: 0.95rem;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
