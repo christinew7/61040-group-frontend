@@ -125,7 +125,6 @@
       @confirm="confirmPopupConfig.onConfirm"
       @close="closeConfirmPopup"
     />
-
   </div>
 </template>
 
@@ -195,7 +194,7 @@ const confirmPopupConfig = ref({
 // Collections data for recipe popup
 const userCollections = ref([]);
 
-//short term sucess/error message 
+//short term sucess/error message
 const showSuccessMessage = ref(false);
 const successMessage = ref("");
 const showErrorMessage = ref(false);
@@ -412,7 +411,9 @@ async function handleAddMember() {
       collectionId.value,
       newMemberEmail.value.trim()
     );
-    showSuccess(`Successfully added ${newMemberEmail.value} to the collection!`);
+    showSuccess(
+      `Successfully added ${newMemberEmail.value} to the collection!`
+    );
     closeAddMemberDialog();
     // Refresh collection to update members list
     await fetchCollectionDetails();
@@ -437,7 +438,7 @@ async function confirmDeleteCollection() {
   try {
     await deleteCollection(token.value, collectionId.value);
     showSuccess(`Collection "${collectionName.value}" has been deleted.`);
-    
+
     setTimeout(() => {
       router.push("/profile");
     }, 1500);
@@ -462,7 +463,7 @@ async function confirmLeaveCollection() {
   try {
     await leaveCollection(token.value, collectionId.value);
     showSuccess(`You have left "${collectionName.value}"`);
-    
+
     setTimeout(() => {
       router.push("/profile");
     }, 1500);
@@ -865,7 +866,7 @@ function getMemberUserId(member) {
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px rgba(2, 142, 65, 0.2);
 }
 
 .members-dropdown h3 {

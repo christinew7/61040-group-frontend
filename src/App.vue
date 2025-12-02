@@ -115,7 +115,9 @@ function showError(message) {
 }
 
 // Show search only on Home page
-const shouldShowSearch = computed(() => route.name === "Home");
+const shouldShowSearch = computed(
+  () => route.name === "Home" || route.name === "Collection"
+);
 
 onMounted(async () => {
   await init();
