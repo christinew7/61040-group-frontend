@@ -416,8 +416,10 @@ async function handleCollectionSubmit(collectionData) {
   padding: 2.5rem 1rem 4rem; /* add top padding so hero isn't flush to viewport */
   /* Apply the subtle landing gradient to the full main content for the landing page */
 /* background: linear-gradient(180deg, rgba(239,122,95,0.06), transparent 60%); */
-
-  background: linear-gradient(180deg, rgba(239,122,95,0.15), rgba(2,142,65,0.05));
+/* orange: rgba(239,122,95,0.06) */
+/* very light brown: rgba(133, 88, 50, 0.3) */
+/* dark brown: light brown rgba(133, 88, 50, 0.5) */
+background: linear-gradient(180deg, rgba(133, 88, 50, 0.3), rgba(2,142,65,0.05));
   background-repeat: no-repeat;
   background-attachment: fixed;
 }
