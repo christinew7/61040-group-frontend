@@ -1,8 +1,9 @@
 <template>
   <div id="app" class="app-root">
     <div class="app-layout">
-      <!-- Global Sidebar -->
+      <!-- Global Sidebar (hidden on Landing) -->
       <Sidebar
+        v-if="!isLanding"
         :showSearch="shouldShowSearch"
         @add-recipe="handleAddRecipe"
         @add-collection="handleAddCollection"
@@ -15,8 +16,8 @@
       />
 
       <!-- Main Content Area -->
-      <div class="main-content">
-        <Header @sign-in="showLogin = true" />
+      <div :class="['main-content', { 'landing-main': isLanding }]">
+        <Header v-if="!isLanding" @sign-in="showLogin = true" />
         <router-view />
       </div>
     </div>
@@ -56,7 +57,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuth } from "./composables/useAuth.js";
 import { useAppSearch } from "./composables/useAppSearch.js";
@@ -119,6 +120,9 @@ const shouldShowSearch = computed(
   () => route.name === "Home" || route.name === "Collection"
 );
 
+// Landing page should be a minimal page without header/sidebar
+const isLanding = computed(() => route.name === "Landing");
+
 onMounted(async () => {
   await init();
   if (isLoggedIn.value) {
@@ -126,6 +130,15 @@ onMounted(async () => {
     await fetchRecipes();
   }
 });
+
+// If a route query sets `showLogin`, open the global login popup.
+watch(
+  () => route.query.showLogin,
+  (val) => {
+    showLogin.value = val === "1" || val === "true";
+  },
+  { immediate: true }
+);
 
 // Helper function to get auth token
 function getToken() {
@@ -160,7 +173,7 @@ function handleProfileClick() {
 }
 
 function handleHomeClick() {
-  router.push("/");
+  router.push({ name: 'Home' });
 }
 
 async function handleLogout() {
@@ -168,9 +181,17 @@ async function handleLogout() {
   router.push("/");
 }
 
-function onLoginSuccess() {
+async function onLoginSuccess() {
   showLogin.value = false;
-  fetchCollections();
+  // Refresh user-scoped data then navigate to home
+  try {
+    await fetchCollections();
+    await fetchRecipes();
+  } catch (e) {
+    console.error('Failed to refresh user data after login:', e);
+  }
+  // Navigate to the app home route
+  router.push({ name: 'Home' });
 }
 
 // Popup Handlers
@@ -382,6 +403,16 @@ async function handleCollectionSubmit(collectionData) {
   width: 0;
   margin-left: 260px; /* account for fixed sidebar width */
   background: var(--app-main-content-background);
+}
+
+/* Landing-specific layout: remove left sidebar margin and center content */
+.main-content.landing-main {
+  margin-left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0 1rem;
 }
 
 /* short term success/error messages */

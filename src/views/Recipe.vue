@@ -537,7 +537,7 @@ async function fetchRecipeDetails() {
     } else {
       // Default to Home
       breadcrumbs = [
-        { label: "Home", route: "/" },
+        { label: "Home", route: "/home" },
         { label: recipe.value.title },
       ];
     }
@@ -943,7 +943,7 @@ function handleProfileClick() {
 }
 
 function handleHomeClick() {
-  router.push("/");
+  router.push("/home");
 }
 
 function handleLogout() {

@@ -679,7 +679,7 @@ function handleProfileClick() {
 }
 
 function handleHomeClick() {
-  router.push("/");
+  router.push("/home");
 }
 
 function onRecipeClick(recipe) {

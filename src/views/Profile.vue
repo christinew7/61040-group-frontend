@@ -535,7 +535,7 @@ function handleProfileClick() {
 }
 
 function handleHomeClick() {
-  router.push("/");
+  router.push("/home");
 }
 </script>
 
