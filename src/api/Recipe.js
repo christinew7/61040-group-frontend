@@ -678,3 +678,268 @@ export async function filterIngredientAndSearch(query, ingredients) {
     );
   }
 }
+
+/**
+ * @route POST api/Recipe/_findRecipeByIngredientWithinRecipes
+ * @desc Find recipes within a specific set that contain the specified ingredients
+ * @param {string[]} ingredients - Array of ingredient names to search for
+ * @param {string[]} recipes - Array of recipe IDs to search within
+ * @returns {Promise<Array>} Array of matching recipe IDs
+ */
+export async function findRecipeByIngredientWithinRecipes(
+  ingredients,
+  recipes
+) {
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    throw new TypeError("Ingredients must be a non-empty array.");
+  }
+  if (!Array.isArray(recipes) || recipes.length === 0) {
+    return [];
+  }
+
+  try {
+    console.log("findRecipeByIngredientWithinRecipes called with:", {
+      ingredients,
+      recipes,
+    });
+    const response = await api.post("/_findRecipeByIngredientWithinRecipes", {
+      ingredients,
+      recipes,
+    });
+    console.log("findRecipeByIngredientWithinRecipes response:", response.data);
+
+    if (!response.data) {
+      return [];
+    }
+
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].recipes || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("findRecipeByIngredientWithinRecipes error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to find recipes."
+    );
+  }
+}
+
+/**
+ * @route POST api/Recipe/_searchWithinRecipes
+ * @desc Search recipes by title within a specific set of recipes
+ * @param {string} query - Search query for recipe title
+ * @param {string[]} recipes - Array of recipe IDs to search within
+ * @returns {Promise<Array>} Array of matching recipe IDs
+ */
+export async function searchWithinRecipes(query, recipes) {
+  if (typeof query !== "string" || query.trim().length === 0) {
+    throw new TypeError("Query is required.");
+  }
+  if (!Array.isArray(recipes) || recipes.length === 0) {
+    return [];
+  }
+
+  try {
+    console.log("searchWithinRecipes called with:", { query, recipes });
+    const response = await api.post("/_searchWithinRecipes", {
+      query,
+      recipes,
+    });
+    console.log("searchWithinRecipes response:", response.data);
+
+    if (!response.data) {
+      return [];
+    }
+
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].recipes || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("searchWithinRecipes error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to search recipes."
+    );
+  }
+}
+
+/**
+ * @route POST api/Recipe/_filterIngredientAndSearchWithinRecipes
+ * @desc Search recipes by title AND filter by ingredients within a specific set
+ * @param {string[]} recipes - Array of recipe IDs to search within
+ * @param {string} query - Search query for recipe title
+ * @param {string[]} ingredients - Array of ingredient names to filter by
+ * @returns {Promise<Array>} Array of matching recipe IDs
+ */
+export async function filterIngredientAndSearchWithinRecipes(
+  recipes,
+  query,
+  ingredients
+) {
+  if (!Array.isArray(recipes) || recipes.length === 0) {
+    return [];
+  }
+  if (typeof query !== "string" || query.trim().length === 0) {
+    throw new TypeError("Query is required.");
+  }
+  if (!Array.isArray(ingredients) || ingredients.length === 0) {
+    throw new TypeError("Ingredients must be a non-empty array.");
+  }
+
+  try {
+    console.log("filterIngredientAndSearchWithinRecipes called with:", {
+      recipes,
+      query,
+      ingredients,
+    });
+    const response = await api.post(
+      "/_filterIngredientAndSearchWithinRecipes",
+      {
+        recipes,
+        query,
+        ingredients,
+      }
+    );
+    console.log(
+      "filterIngredientAndSearchWithinRecipes response:",
+      response.data
+    );
+
+    if (!response.data) {
+      return [];
+    }
+
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].recipes || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("filterIngredientAndSearchWithinRecipes error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to filter recipes."
+    );
+  }
+}
+
+/**
+ * @route POST api/Recipe/_getIngredients
+ * @desc Get all ingredients
+ * @returns {Promise<Array>} Array of all ingredient objects
+ */
+export async function getIngredients() {
+  try {
+    const response = await api.post("/_getIngredients", {});
+    console.log("getIngredients response:", response.data);
+
+    if (!response.data) {
+      return [];
+    }
+
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].ingredients || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("getIngredients error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to fetch ingredients."
+    );
+  }
+}
+
+/**
+ * @route POST api/Recipe/_getIngredientsByName
+ * @desc Search for ingredients by name
+ * @param {string} name - Ingredient name to search for
+ * @returns {Promise<Array>} Array of matching ingredient objects
+ */
+export async function getIngredientsByName(name) {
+  if (typeof name !== "string" || name.trim().length === 0) {
+    throw new TypeError("Ingredient name is required.");
+  }
+
+  try {
+    console.log("getIngredientsByName called with:", name);
+    const response = await api.post("/_getIngredientsByName", { name });
+    console.log("getIngredientsByName response:", response.data);
+
+    if (!response.data) {
+      return [];
+    }
+
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].ingredients || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("getIngredientsByName error:", err);
+    throw new Error(
+      err.response?.data?.error ||
+        err.message ||
+        "Failed to search ingredients."
+    );
+  }
+}
+
+/**
+ * @route POST api/Recipe/_scaleIngredients
+ * @desc Scale recipe ingredients by a factor
+ * @param {string} recipe - Recipe ID
+ * @param {number} scaleFactor - Factor to scale by (must be positive)
+ * @returns {Promise<Array>} Array of scaled ingredient objects
+ */
+export async function scaleIngredients(recipe, scaleFactor) {
+  if (typeof recipe !== "string") {
+    throw new TypeError("Recipe ID is required.");
+  }
+  if (typeof scaleFactor !== "number" || scaleFactor <= 0) {
+    throw new TypeError("Scale factor must be a positive number.");
+  }
+
+  try {
+    console.log("scaleIngredients called with:", { recipe, scaleFactor });
+    const response = await api.post("/_scaleIngredients", {
+      recipe,
+      scaleFactor,
+    });
+    console.log("scaleIngredients response:", response.data);
+
+    if (!response.data) {
+      return [];
+    }
+
+    if (Array.isArray(response.data) && response.data.length > 0) {
+      if (response.data[0].error) {
+        throw new Error(response.data[0].error);
+      }
+      return response.data[0].ingredients || [];
+    }
+
+    return [];
+  } catch (err) {
+    console.error("scaleIngredients error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to scale ingredients."
+    );
+  }
+}

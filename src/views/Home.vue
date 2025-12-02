@@ -7,7 +7,7 @@
     <!-- My Recipes (owner) -->
     <section v-if="isLoggedIn && !isLoading" class="recipes-section">
       <h3>My Recipes ({{ filteredMyRecipes.length }})</h3>
-      <div v-if="myRecipes.length === 0" class="empty-state">
+      <div v-if="myRecipes.length === 0 && !hasActiveFilters" class="empty-state">
         You haven't created any recipes yet. Add one from the sidebar!
       </div>
       <div v-else-if="filteredMyRecipes.length === 0" class="empty-state">
@@ -23,7 +23,11 @@
           />
         </div>
         <div v-else class="recipes-row">
-          <div class="recipe-item" v-for="(recipe, index) in filteredMyRecipes" :key="`${recipe._id}-${index}`">
+          <div
+            class="recipe-item"
+            v-for="(recipe, index) in filteredMyRecipes"
+            :key="`${recipe._id}-${index}`"
+          >
             <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
           </div>
         </div>
@@ -32,11 +36,16 @@
 
     <!-- Recipes that are in the user's collections -->
     <section v-if="isLoggedIn && !isLoading" class="recipes-section">
-      <h3>Recipes In My Collections ({{ filteredCollectionRecipes.length }})</h3>
-      <div v-if="collectionRecipes.length === 0" class="empty-state">
+      <h3>
+        Recipes In My Collections ({{ filteredCollectionRecipes.length }})
+      </h3>
+      <div v-if="collectionRecipes.length === 0 && !hasActiveFilters" class="empty-state">
         You don't have any recipes in your collections yet.
       </div>
-      <div v-else-if="filteredCollectionRecipes.length === 0" class="empty-state">
+      <div
+        v-else-if="filteredCollectionRecipes.length === 0"
+        class="empty-state"
+      >
         No recipes match your search criteria.
       </div>
       <div v-else>
@@ -49,7 +58,11 @@
           />
         </div>
         <div v-else class="recipes-row">
-          <div class="recipe-item" v-for="(recipe, index) in filteredCollectionRecipes" :key="`${recipe._id}-${index}`">
+          <div
+            class="recipe-item"
+            v-for="(recipe, index) in filteredCollectionRecipes"
+            :key="`${recipe._id}-${index}`"
+          >
             <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
           </div>
         </div>
@@ -78,7 +91,11 @@
           />
         </div>
         <div v-else class="recipes-row">
-          <div class="recipe-item" v-for="(recipe, index) in filteredRecipes" :key="`${recipe._id}-${index}`">
+          <div
+            class="recipe-item"
+            v-for="(recipe, index) in filteredRecipes"
+            :key="`${recipe._id}-${index}`"
+          >
             <RecipeDisplay :recipe="recipe" @click="onRecipeClick" />
           </div>
         </div>
@@ -88,7 +105,7 @@
     <!-- Global view toggle -->
     <div class="global-view-toggle">
       <button class="view-toggle" @click="toggleViewMode">
-        {{ viewMode === 'grid' ? 'Horizontal' : 'Grid' }}
+        {{ viewMode === "grid" ? "Horizontal" : "Grid" }}
       </button>
     </div>
 
@@ -157,16 +174,19 @@ import {
   parseIngredients,
   setImage,
   getAllRecipesGlobal,
-  searchRecipes,
+  search,
   getAllMyRecipes,
   findRecipeByIngredient,
   filterIngredientAndSearch,
+  findRecipeByIngredientWithinRecipes,
+  searchWithinRecipes,
+  filterIngredientAndSearchWithinRecipes,
 } from "../api/Recipe.js";
-import { 
-  getMyCollections, 
+import {
+  getMyCollections,
   addItemToCollection,
-  createCollection,      
-  addMemberToCollection
+  createCollection,
+  addMemberToCollection,
 } from "../api/Collecting.js";
 import LoginPopup from "../components/LoginPopup.vue";
 
@@ -179,14 +199,184 @@ const myRecipes = ref([]);
 const collectionRecipes = ref([]);
 const isLoading = ref(false);
 
-// Computed filtered global recipes
+// Computed to check if there are active search/filter criteria
+const hasActiveFilters = computed(() => {
+  return (searchQuery.value?.trim() || ingredientFilters.value.length > 0);
+});
+
+// Watch for filter changes and fetch filtered results from backend
+watch(
+  [searchQuery, ingredientFilters],
+  async ([newQuery, newFilters]) => {
+    await fetchFilteredRecipes();
+    if (isLoggedIn.value) {
+      await fetchFilteredMyRecipes();
+      await fetchFilteredCollectionRecipes();
+    }
+  },
+  { deep: true }
+);
+
+async function fetchFilteredRecipes() {
+  isLoading.value = true;
+  try {
+    const hasQuery = searchQuery.value?.trim();
+    const hasFilters = ingredientFilters.value.length > 0;
+
+    let recipes = [];
+
+    // If searching/filtering, search across ALL recipes (including private ones)
+    if (hasQuery && hasFilters) {
+      console.log("Searching ALL recipes with both query and ingredients");
+      recipes = await filterIngredientAndSearch(
+        searchQuery.value.trim(),
+        ingredientFilters.value
+      );
+    } else if (hasQuery) {
+      console.log("Searching ALL recipes with query:", searchQuery.value);
+      // Use the search() function which searches all recipes, not just public
+      recipes = await search(searchQuery.value.trim());
+    } else if (hasFilters) {
+      console.log(
+        "Filtering ALL recipes by ingredients:",
+        ingredientFilters.value
+      );
+      recipes = await findRecipeByIngredient(ingredientFilters.value);
+    } else {
+      // No filters - just get public recipes
+      console.log("Fetching public recipes (no filters)");
+      recipes = await getAllRecipesGlobal();
+    }
+
+    // Preserve order from backend
+    allRecipes.value = [...(recipes || [])];
+    console.log("Total recipes found:", allRecipes.value.length);
+  } catch (error) {
+    console.error("Failed to fetch filtered recipes:", error);
+    allRecipes.value = [];
+  } finally {
+    isLoading.value = false;
+  }
+}
+
+async function fetchFilteredMyRecipes() {
+  if (!isLoggedIn.value) return;
+
+  try {
+    const hasQuery = searchQuery.value?.trim();
+    const hasFilters = ingredientFilters.value.length > 0;
+
+    // If searching/filtering, results come from the global search
+    // Just filter to show only recipes owned by the user
+    if (hasQuery || hasFilters) {
+      const myOwnerId = user.value?.userId;
+      const myOwnRecipes = allRecipes.value.filter(
+        (r) => r.owner === myOwnerId
+      );
+      myRecipes.value = [...myOwnRecipes].reverse();
+    } else {
+      // No filters - fetch user's recipes normally
+      const allMyRecipes = await getAllMyRecipes(token.value);
+      myRecipes.value = [...(allMyRecipes || [])].reverse();
+    }
+
+    console.log("My recipes count:", myRecipes.value.length);
+  } catch (error) {
+    console.error("Failed to fetch filtered my recipes:", error);
+    myRecipes.value = [];
+  }
+}
+
+async function fetchFilteredCollectionRecipes() {
+  if (!isLoggedIn.value) return;
+
+  try {
+    const hasQuery = searchQuery.value?.trim();
+    const hasFilters = ingredientFilters.value.length > 0;
+
+    // Get collections to know which recipes belong to user's collections
+    const response = await getMyCollections(token.value);
+    userCollections.value = response || [];
+
+    // Build set of recipe IDs in user's collections
+    const collectionRecipeIds = new Set();
+    (userCollections.value || []).forEach((col) => {
+      const items = col.items || col.recipes || [];
+      if (!Array.isArray(items)) return;
+      items.forEach((it) => {
+        let candidate = it;
+        if (candidate && candidate.recipe) candidate = candidate.recipe;
+        const id =
+          (candidate && (candidate._id || candidate.id)) ||
+          (typeof candidate === "string" ? candidate : null);
+        if (id) collectionRecipeIds.add(id);
+      });
+    });
+
+    if (hasQuery || hasFilters) {
+      // Filter from global search results
+      const myOwnerId = user.value?.userId;
+      const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
+
+      const filtered = allRecipes.value.filter((r) => {
+        // Must be in a collection
+        if (!collectionRecipeIds.has(r._id)) return false;
+        // Exclude if it's in my own recipes (to avoid duplication)
+        if (myRecipesSet.has(r._id)) return false;
+        return true;
+      });
+
+      collectionRecipes.value = [...filtered];
+    } else {
+      // No filters - aggregate from collections normally
+      const aggregated = [];
+      const seen = new Set();
+      (userCollections.value || []).forEach((col) => {
+        const items = col.items || col.recipes || [];
+        if (!Array.isArray(items)) return;
+        items.forEach((it) => {
+          let candidate = it;
+          if (candidate && candidate.recipe) candidate = candidate.recipe;
+          const id =
+            (candidate && (candidate._id || candidate.id)) ||
+            (typeof candidate === "string" ? candidate : null);
+          if (!id) return;
+          if (seen.has(id)) return;
+          seen.add(id);
+          if (typeof candidate === "string") {
+            const found =
+              (allRecipes.value || []).find((r) => r._id === candidate) ||
+              (myRecipes.value || []).find((r) => r._id === candidate);
+            if (found) aggregated.push(found);
+          } else {
+            aggregated.push(candidate);
+          }
+        });
+      });
+
+      const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
+      collectionRecipes.value = aggregated.filter(
+        (r) => !myRecipesSet.has(r._id)
+      );
+    }
+
+    console.log("Collection recipes count:", collectionRecipes.value.length);
+  } catch (error) {
+    console.error("Failed to fetch filtered collection recipes:", error);
+    collectionRecipes.value = [];
+  }
+}
+
+// Computed filtered global recipes - now just excludes user's own recipes
 const filteredRecipes = computed(() => {
   let recipes = allRecipes.value;
 
   // Exclude recipes that belong to the current user (so they only appear in My Recipes)
   if (isLoggedIn.value) {
     const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
-    const collectionRecipesSet = new Set((collectionRecipes.value || []).map((r) => r._id));
+    const collectionRecipesSet = new Set(
+      (collectionRecipes.value || []).map((r) => r._id)
+    );
     const myOwnerId = user.value?.userId;
     recipes = recipes.filter((r) => {
       if (!r) return false;
@@ -199,88 +389,17 @@ const filteredRecipes = computed(() => {
     });
   }
 
-  // Filter by search query (recipe title)
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
-    recipes = recipes.filter((recipe) =>
-      recipe.title?.toLowerCase().includes(query)
-    );
-  }
-
-  // Filter by ingredients
-  if (ingredientFilters.value.length > 0) {
-    recipes = recipes.filter((recipe) => {
-      // Check if recipe has all the filtered ingredients
-      return ingredientFilters.value.every((filterIngredient) => {
-        const filterLower = filterIngredient.toLowerCase();
-        return recipe.ingredients?.some((ingredient) =>
-          ingredient.name?.toLowerCase().includes(filterLower)
-        );
-      });
-    });
-  }
-
   return recipes;
 });
 
-// Computed filtered my-recipes (apply same search/ingredient filters)
+// Computed filtered my-recipes - already filtered by backend
 const filteredMyRecipes = computed(() => {
-  let recipes = myRecipes.value;
-
-  // Filter by search query (recipe title)
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
-    recipes = recipes.filter((recipe) =>
-      recipe.title?.toLowerCase().includes(query)
-    );
-  }
-
-  // Filter by ingredients
-  if (ingredientFilters.value.length > 0) {
-    recipes = recipes.filter((recipe) => {
-      return ingredientFilters.value.every((filterIngredient) => {
-        const filterLower = filterIngredient.toLowerCase();
-        return recipe.ingredients?.some((ingredient) =>
-          ingredient.name?.toLowerCase().includes(filterLower)
-        );
-      });
-    });
-  }
-
-  return recipes;
+  return myRecipes.value;
 });
 
-// Computed filtered recipes that come from the user's collections
+// Computed filtered collection recipes - already filtered by backend
 const filteredCollectionRecipes = computed(() => {
-  let recipes = collectionRecipes.value || [];
-
-  // Filter out recipes in myRecipes to avoid duplicates
-  if (isLoggedIn.value) {
-    const myRecipesSet = new Set((myRecipes.value || []).map((r) => r._id));
-    recipes = recipes.filter((r) => !myRecipesSet.has(r._id));
-  }
-  
-  // Filter by search query (recipe title)
-  if (searchQuery.value.trim()) {
-    const query = searchQuery.value.toLowerCase().trim();
-    recipes = recipes.filter((recipe) =>
-      recipe.title?.toLowerCase().includes(query)
-    );
-  }
-
-  // Filter by ingredients
-  if (ingredientFilters.value.length > 0) {
-    recipes = recipes.filter((recipe) => {
-      return ingredientFilters.value.every((filterIngredient) => {
-        const filterLower = filterIngredient.toLowerCase();
-        return recipe.ingredients?.some((ingredient) =>
-          ingredient.name?.toLowerCase().includes(filterLower)
-        );
-      });
-    });
-  }
-
-  return recipes;
+  return collectionRecipes.value;
 });
 
 // Success/Error messages
@@ -310,44 +429,27 @@ onMounted(async () => {
   setBreadcrumbs([]);
   setActions([]);
   await init();
-  await fetchAllRecipes();
+  await fetchFilteredRecipes();
   if (isLoggedIn.value) {
-    await fetchMyRecipes();
-    await fetchCollections();
+    await fetchFilteredMyRecipes();
+    await fetchFilteredCollectionRecipes();
   }
 });
 
 async function fetchMyRecipes() {
-  if (!isLoggedIn.value) return;
-  isLoading.value = true;
-  try {
-    const recipes = await getAllMyRecipes(token.value);
-    myRecipes.value = (recipes || []).reverse();
-  } catch (err) {
-    console.error("Failed to fetch my recipes:", err);
-    myRecipes.value = [];
-  } finally {
-    isLoading.value = false;
-  }
+  // Deprecated - use fetchFilteredMyRecipes instead
+  await fetchFilteredMyRecipes();
 }
 
 //Global recipes
 async function fetchAllRecipes() {
-  isLoading.value = true;
-  try {
-    console.log("Calling getAllRecipesGlobal...");
-    const recipes = await getAllRecipesGlobal();
-    allRecipes.value = recipes || [];
-    console.log("Fetched all recipes:", allRecipes.value);
-    console.log("Number of recipes:", allRecipes.value.length);
-  } catch (error) {
-    console.error("Failed to fetch recipes:", error);
-    console.error("Error details:", error.message);
-    // Set empty array on error so page still renders
-    allRecipes.value = [];
-  } finally {
-    isLoading.value = false;
-  }
+  // Deprecated - use fetchFilteredRecipes instead
+  await fetchFilteredRecipes();
+}
+
+async function fetchCollections() {
+  // Deprecated - use fetchFilteredCollectionRecipes instead
+  await fetchFilteredCollectionRecipes();
 }
 
 async function handleLogout() {
@@ -372,41 +474,11 @@ function toggleViewMode() {
 // Collections data
 const userCollections = ref([]);
 
-async function fetchCollections() {
-  if (!isLoggedIn.value) return;
-
-  try {
-    const response = await getMyCollections(token.value);
-    userCollections.value = response || [];
-
-    // Aggregate recipe objects from the user's collections.
-    // Collections may include an `items` array with recipe objects or IDs.
-    const aggregated = [];
-    const seen = new Set();
-    (userCollections.value || []).forEach((col) => {
-      const items = col.items || col.recipes || [];
-      if (!Array.isArray(items)) return;
-      items.forEach((it) => {
-        // Item might be a recipe object or an id or wrapped object
-        let candidate = it;
-        if (candidate && candidate.recipe) candidate = candidate.recipe;
-        const id = (candidate && (candidate._id || candidate.id)) || (typeof candidate === 'string' ? candidate : null);
-        if (!id) return;
-        if (seen.has(id)) return;
-        seen.add(id);
-        // If we only have an id, try to find the full recipe in fetched lists
-        if (typeof candidate === 'string') {
-          const found = (allRecipes.value || []).find((r) => r._id === candidate) || (myRecipes.value || []).find((r) => r._id === candidate);
-          if (found) aggregated.push(found);
-        } else {
-          aggregated.push(candidate);
-        }
-      });
-    });
-
-    collectionRecipes.value = aggregated;
-  } catch (error) {
-    console.error("Failed to fetch collections:", error);
+async function refreshAllData() {
+  await fetchFilteredRecipes();
+  if (isLoggedIn.value) {
+    await fetchFilteredMyRecipes();
+    await fetchFilteredCollectionRecipes();
   }
 }
 
@@ -431,7 +503,7 @@ async function handleRecipeSubmit(recipeData) {
       token.value,
       recipeData.name,
       recipeData.link?.trim() || undefined,
-      recipeData.description?.trim() || undefined,
+      recipeData.description?.trim() || undefined
     );
     console.log("Recipe created with ID:", recipeId);
 
@@ -475,7 +547,7 @@ async function handleRecipeSubmit(recipeData) {
         await addItemToCollection(token.value, recipeData.collection, recipeId);
         console.log(`Added recipe to collection: ${recipeData.collection}`);
         // Refresh collections so the "Recipes In My Collections" section updates
-        await fetchCollections();
+        await fetchFilteredCollectionRecipes();
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
       }
@@ -484,7 +556,7 @@ async function handleRecipeSubmit(recipeData) {
     alert(`Recipe "${recipeData.name}" created successfully!`);
 
     // Refresh recipes list
-    await fetchAllRecipes();
+    await refreshAllData();
   } catch (error) {
     console.error("Failed to create recipe:", error);
     alert(`Failed to create recipe: ${error.message}`);
@@ -516,7 +588,7 @@ async function handleParsedRecipeSubmit(submissionData) {
         await addItemToCollection(token.value, collection, parsedRecipeId);
         console.log(`Added recipe to collection: ${collection}`);
         // Refresh collections so the collection recipes list updates
-        await fetchCollections();
+        await fetchFilteredCollectionRecipes();
       } catch (error) {
         console.error("Failed to add recipe to collection:", error);
       }
@@ -525,7 +597,7 @@ async function handleParsedRecipeSubmit(submissionData) {
     alert("Recipe created successfully from link!");
 
     // Refresh recipes list
-    await fetchAllRecipes();
+    await refreshAllData();
   } catch (error) {
     console.error("Failed to update parsed recipe:", error);
     alert(`Failed to update recipe: ${error.message}`);
@@ -548,7 +620,10 @@ async function handleCollectionSubmit(collectionData) {
   }
 
   try {
-    const newCollection = await createCollection(token.value, collectionData.name);
+    const newCollection = await createCollection(
+      token.value,
+      collectionData.name
+    );
 
     let collectionId;
     if (typeof newCollection === "string") {
@@ -562,7 +637,7 @@ async function handleCollectionSubmit(collectionData) {
     }
 
     // Add shared users
-    for (const email of (collectionData.sharedUsers || [])) {
+    for (const email of collectionData.sharedUsers || []) {
       try {
         await addMemberToCollection(token.value, collectionId, email);
       } catch (error) {
@@ -571,7 +646,7 @@ async function handleCollectionSubmit(collectionData) {
     }
 
     // Add recipes
-    for (const recipeId of (collectionData.recipes || [])) {
+    for (const recipeId of collectionData.recipes || []) {
       try {
         await addItemToCollection(token.value, collectionId, recipeId);
       } catch (error) {
@@ -579,7 +654,7 @@ async function handleCollectionSubmit(collectionData) {
       }
     }
 
-    await fetchCollections();
+    await fetchFilteredCollectionRecipes();
     showSuccess(`Collection "${collectionData.name}" created successfully!`);
   } catch (error) {
     console.error("Failed to create collection:", error);
@@ -589,39 +664,14 @@ async function handleCollectionSubmit(collectionData) {
 
 async function handleRecipeSearch(query) {
   console.log("Home - handleRecipeSearch received query:", query);
-  console.log("Query type:", typeof query, "Query length:", query?.length);
   searchQuery.value = query;
-
-  // If search query is empty or too short, fetch all recipes
-  if (!query || !query.trim()) {
-    console.log("Empty query, fetching all recipes");
-    await fetchAllRecipes();
-    return;
-  }
-
-  // Trim the query
-  const trimmedQuery = query.trim();
-
-  // Call API to search by title
-  console.log("Calling searchRecipes API with:", trimmedQuery);
-  isLoading.value = true;
-  try {
-    const recipes = await searchRecipes(trimmedQuery);
-    allRecipes.value = recipes || [];
-    console.log("Search results:", allRecipes.value.length, "recipes found");
-  } catch (error) {
-    console.error("Failed to search recipes:", error);
-    // On error, show empty results instead of crashing
-    allRecipes.value = [];
-    alert(`Search failed: ${error.message}`);
-  } finally {
-    isLoading.value = false;
-  }
+  // Watch will trigger fetchFilteredRecipes automatically
 }
 
 function handleIngredientFilter(ingredients) {
   console.log("Filter by ingredients:", ingredients);
   ingredientFilters.value = ingredients;
+  // Watch will trigger fetchFilteredRecipes automatically
 }
 
 function handleProfileClick() {
@@ -703,8 +753,8 @@ function onRecipeClick(recipe) {
   overflow-x: auto;
   padding: 0.75rem;
   margin-bottom: 1rem;
-  border: 1px solid rgba(15,23,42,0.06);
-  background: rgba(255,255,255,0.9);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 8px;
 }
 
@@ -718,7 +768,7 @@ function onRecipeClick(recipe) {
   height: 10px;
 }
 .recipes-row::-webkit-scrollbar-thumb {
-  background: rgba(15,23,42,0.15);
+  background: rgba(15, 23, 42, 0.15);
   border-radius: 8px;
 }
 .global-view-toggle {
