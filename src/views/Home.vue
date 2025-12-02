@@ -436,26 +436,6 @@ onMounted(async () => {
   }
 });
 
-async function fetchMyRecipes() {
-  // Deprecated - use fetchFilteredMyRecipes instead
-  await fetchFilteredMyRecipes();
-}
-
-//Global recipes
-async function fetchAllRecipes() {
-  // Deprecated - use fetchFilteredRecipes instead
-  await fetchFilteredRecipes();
-}
-
-async function fetchCollections() {
-  // Deprecated - use fetchFilteredCollectionRecipes instead
-  await fetchFilteredCollectionRecipes();
-}
-
-async function handleLogout() {
-  await logout();
-}
-
 function onLoginSuccess() {
   console.log("Login successful!");
 }
@@ -662,26 +642,6 @@ async function handleCollectionSubmit(collectionData) {
   }
 }
 
-async function handleRecipeSearch(query) {
-  console.log("Home - handleRecipeSearch received query:", query);
-  searchQuery.value = query;
-  // Watch will trigger fetchFilteredRecipes automatically
-}
-
-function handleIngredientFilter(ingredients) {
-  console.log("Filter by ingredients:", ingredients);
-  ingredientFilters.value = ingredients;
-  // Watch will trigger fetchFilteredRecipes automatically
-}
-
-function handleProfileClick() {
-  router.push("/profile");
-}
-
-function handleHomeClick() {
-  router.push("/home");
-}
-
 function onRecipeClick(recipe) {
   console.log("Recipe clicked:", recipe);
   router.push({
@@ -701,25 +661,7 @@ function onRecipeClick(recipe) {
   flex: 1;
   max-width: 1200px;
   padding: 2rem;
-}
-
-.debug-section {
-  margin-top: 2rem;
-  padding: 1rem;
-  background: #f9fafb;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-}
-
-.debug-section h3 {
-  margin-top: 0;
-  font-size: 1rem;
-  color: var(--color-primary);
-}
-
-.debug-section p {
-  margin: 0.5rem 0;
-  font-size: 0.9rem;
+  padding-top: 0;
 }
 
 .loading-state {
