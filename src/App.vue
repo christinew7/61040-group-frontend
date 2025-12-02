@@ -394,7 +394,7 @@ async function handleCollectionSubmit(collectionData) {
 <style scoped>
 .app-layout {
   display: flex;
-  min-height: 100vh;
+  min-height: fit-content;
 }
 
 .main-content {
@@ -409,10 +409,17 @@ async function handleCollectionSubmit(collectionData) {
 .main-content.landing-main {
   margin-left: 0;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  /* Keep content at the top so the page isn't visually cut off */
+  align-items: flex-start;
+  justify-content: flex-start;
   min-height: 100vh;
-  padding: 0 1rem;
+  padding: 2.5rem 1rem 4rem; /* add top padding so hero isn't flush to viewport */
+  /* Apply the subtle landing gradient to the full main content for the landing page */
+/* background: linear-gradient(180deg, rgba(239,122,95,0.06), transparent 60%); */
+
+  background: linear-gradient(180deg, rgba(239,122,95,0.15), rgba(2,142,65,0.05));
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 /* short term success/error messages */
