@@ -185,7 +185,7 @@ defineEmits(["sign-in"]);
   margin: 0;
   font-size: 1.75rem;
   color: var(--color-primary);
-  text-transform: lowercase;
+  text-transform: capitalize;
   line-height: 1.2;
 }
 
