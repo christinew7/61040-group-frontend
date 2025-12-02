@@ -1,14 +1,28 @@
 {
     "categories": [
+        "frequently wasted items",
         "common pantry items",
         "meat",
         "vegetables",
         "fruits",
         "condiments and seasonings"
     ],
+    "frequently wasted items": [
+        "lettuce",
+        "spinach",
+        "milk",
+        "egg",
+        "bread",
+        "yogurt",
+        "banana",
+        "berries",
+        "chicken",
+        "cheese",
+        "potato",
+        "rice"
+    ],
     "common pantry items": [
         "butter",
-        "egg",
         "garlic",
         "flour",
         "sugar",
@@ -16,6 +30,7 @@
         "bread",
         "pasta",
         "milk",
+        "egg",
         "cheese"
     ],
     "vegetables": [
