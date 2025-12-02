@@ -9,7 +9,7 @@
   border-right: 1px solid var(--sidebar-border-color);
   display: flex;
   flex-direction: column;
-  padding: 1rem;
+  padding: 1.5rem 1rem 1rem 1rem;
   overflow-y: auto;
   overflow-x: hidden;
   z-index: 1000;
@@ -35,6 +35,7 @@
 
   h1 {
     margin: 0;
+    padding-top: 0.125rem;
     font-size: 2rem;
     font-weight: 700;
     color: var(--color-primary);
