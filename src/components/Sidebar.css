@@ -5,14 +5,20 @@
   left: 0;
   bottom: 0;
   height: 100vh;
-  background: var(--color-bg-light, #ffffff);
-  border-right: 1px solid #e5e7eb;
+  background: var(--sidebar-background, #ffffff);
+  border-right: 1px solid var(--sidebar-border-color, #e5e7eb);
   display: flex;
   flex-direction: column;
-  flex: 0 0 260px;
-  padding: 1rem;
-  overflow-y: auto; /* allow the sidebar to scroll independently */
+  padding: 1.5rem 1rem 1rem 1rem;
+  overflow-y: auto;
+  overflow-x: hidden;
   z-index: 1000;
+  box-sizing: border-box;
+}
+
+.sidebar > * {
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
 
 .sidebar-content {
@@ -27,6 +33,7 @@
   margin: 0;
   font-size: 2rem;
   font-weight: 700;
+  margin-bottom: 2rem;
   color: var(--color-primary);
   text-align: center;
   cursor: pointer;

@@ -92,7 +92,7 @@
 import { ref } from "vue";
 import { useAuth } from "../composables/useAuth.js";
 import IngredientChip from "./IngredientChip.vue";
-import "./Sidebar.scss";
+import "./Sidebar.css";
 import chipsData from "../utils/chips.json";
 
 const props = defineProps({

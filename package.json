@@ -2,6 +2,7 @@
   "name": "61040-group-frontend",
   "version": "1.0.0",
   "description": "This is the group's frontend for the 6.1040 project.",
+  "type": "module",
   "main": "vite.config.js",
   "scripts": {
     "dev": "vite",
