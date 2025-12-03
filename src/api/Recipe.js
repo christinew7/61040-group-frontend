@@ -387,6 +387,27 @@ export async function parseFromLink(token, link) {
 // --- Recipe Metadata Updates ---
 
 /**
+ * @route POST api/Recipe/setRecipe
+ * @desc Update recipe title.
+ * @returns {Promise<void>}
+ */
+export async function setRecipeTitle(token, recipeId, title) {
+  if (typeof token !== "string" || typeof recipeId !== "string" || typeof title !== "string") {
+    throw new TypeError("Token, recipe ID, and title are required.");
+  }
+
+  try {
+    const response = await api.post("/setRecipe", { token, recipe: recipeId, title });
+
+    if (response.data?.error) {
+      throw new Error(response.data.error);
+    }
+  } catch (err) {
+    throw new Error(err.response?.data?.error || "Failed to update recipe title.");
+  }
+}
+
+/**
  * @route POST api/Recipe/setLink
  */
 export async function setLink(token, recipeId, link) {

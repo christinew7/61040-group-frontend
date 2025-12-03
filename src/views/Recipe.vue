@@ -206,11 +206,14 @@
               <input 
                 id="edit-title" 
                 type="text" 
-                :value="recipe.title" 
-                disabled 
-                class="form-input disabled"
+                v-model="editForm.title"
+                class="form-input"
+                placeholder="Recipe title..."
               />
-              <span class="helper-text">Title cannot be changed</span>
+              <span class="helper-text">Title must be unique among your recipes</span>
+              <span v-if="titleConflict" class="helper-text error-text">
+                A recipe with this title already exists in your recipes. Other changes will be saved, but title will not be updated.
+              </span>
             </div>
             
             <div class="form-group">
@@ -363,6 +366,7 @@ import {
   parseIngredients,
   deleteIngredient,
   removeDescription,
+  setRecipeTitle,
 } from "../api/Recipe.js";
 import {
   getMyCollections,
@@ -423,6 +427,7 @@ const editForm = ref({
   ingredientsText: "",
   isPublic: false,
 });
+const titleConflict = ref(false);
 
 // image input
 const imageInputType = ref("url");
@@ -610,6 +615,7 @@ function handleEditRecipe() {
     .join("\n");
 
   editForm.value = {
+    title: recipe.value.title || "",
     description: recipe.value.description || "",
     link: recipe.value.link || "",
     image: recipe.value.image || "",
@@ -620,6 +626,7 @@ function handleEditRecipe() {
   // Reset image input type
   imageInputType.value = "url";
   uploadedFileName.value = "";
+  titleConflict.value = false;
 
   showEditModal.value = true;
 }
@@ -651,8 +658,29 @@ async function submitEdit() {
   }
 
   isSaving.value = true;
+  titleConflict.value = false;
+  let titleWasUpdated = false;
   
   try {
+    // Update title if changed
+    if (editForm.value.title !== recipe.value.title) {
+      try {
+        await setRecipeTitle(token.value, recipe.value._id, editForm.value.title);
+        titleWasUpdated = true;
+      } catch (err) {
+        console.error("Failed to update title:", err);
+        // Check if it's a duplicate title error
+        if (err.message.includes("already exists")) {
+          titleConflict.value = true;
+          //Show specific error message
+          showError("A recipe with this title already exists in your recipes");
+          // Continue with other updates
+        } else {
+          throw err;  // Re-throw if it's a different error
+        }
+      }
+    }
+
     // Update description if changed
     const originalDescription = recipe.value.description || "";
     const newDescription = editForm.value.description?.trim() || "";
@@ -737,7 +765,7 @@ async function submitEdit() {
         );
       }
     }
-    
+
     // Clear the cached recipe from query params so we fetch fresh
     if (route.query.recipe) {
       router.replace({
@@ -748,10 +776,10 @@ async function submitEdit() {
         }
       });
     }
-
-    // Refresh recipe data
+    
+    // Refresh recipe data 
     const owner = recipe.value.owner;
-    const title = recipe.value.title;
+    const title = titleWasUpdated ? editForm.value.title : recipe.value.title; 
     const data = await getRecipe(owner, title);
 
     let recipes = data;
@@ -763,8 +791,16 @@ async function submitEdit() {
     }
     recipe.value = Array.isArray(recipes) ? recipes[0] : recipes;
 
-    showEditModal.value = false;
-    showSuccess("Recipe updated!");
+    // Only close modal and show success if no title conflict
+    if (!titleConflict.value) {
+      showEditModal.value = false;
+      showSuccess("Recipe updated!");
+    } else {
+      // Title conflict - keep modal open, show which field failed
+      // Modal stays open so user can fix the title
+      showSuccess("Other changes saved (title unchanged)");
+    }
+    
   } catch (err) {
     console.error("Failed to update recipe:", err);
     showError(`Failed to update: ${err.message}`);
@@ -1410,6 +1446,11 @@ function handleLogout() {
   font-size: 0.8rem;
   color: #6b7280;
   margin-top: 0.25rem;
+}
+
+.helper-text.error-text {
+  color: #dc2626;
+  font-weight: 600;
 }
 
 textarea.form-input {
