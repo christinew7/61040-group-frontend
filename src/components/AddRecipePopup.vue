@@ -245,6 +245,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
+import { useRouter } from "vue-router";
 import { parseFromLink } from "../api/Recipe.js";
 import { useAuth } from "../composables/useAuth.js";
 import "./AddRecipePopup.css";
@@ -263,6 +264,7 @@ const props = defineProps({
 const emit = defineEmits(["close", "submit", "submitParsed"]);
 
 const { token } = useAuth();
+const router = useRouter();
 
 const inputMode = ref("manual"); // 'manual' or 'link'
 const imageInputType = ref("url");
@@ -322,15 +324,48 @@ async function parseRecipeFromLink() {
       throw new Error("Invalid recipe response from server");
     }
 
-    parsedRecipe.value = recipe;
-    isParsed.value = true;
+    // Reset form immediately before navigating
+    inputMode.value = "manual";
+    imageInputType.value = "url";
+    uploadedFileName.value = "";
+    isParsing.value = false;
+    isParsed.value = false;
     parseError.value = "";
-    console.log(
-      "Recipe parsed successfully, ID:",
-      recipe._id,
-      "Owner:",
-      recipe.owner
-    );
+    parsedRecipe.value = null;
+    formData.value = {
+      name: "",
+      description: "",
+      link: "",
+      image: "",
+      collection: "",
+      isPublic: false,
+      ingredientsText: "",
+    };
+
+    // Recipe successfully parsed! Close popup and navigate to edit
+    emit("close");
+
+    // Check if we're already on a Recipe page
+    const isAlreadyOnRecipePage = router.currentRoute.value.name === "Recipe";
+    
+    if (isAlreadyOnRecipePage) {
+      // Force navigation by going to home first, then to the new recipe
+      await router.push("/home");
+      // Small delay to ensure route change is processed
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+
+    // Navigate to Recipe page with edit mode
+    router.push({
+      name: "Recipe",
+      params: { id: recipe._id },
+      query: {
+        owner: recipe.owner,
+        title: recipe.title,
+        edit: "true",  // Flag to open edit modal
+        recipe: JSON.stringify(recipe)  // Pass full recipe data
+      }
+    });
   } catch (error) {
     console.error("Error parsing recipe from link:", error);
     parseError.value = error.message || "Failed to parse recipe from link";

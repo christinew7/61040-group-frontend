@@ -440,6 +440,13 @@ const defaultImage = "https://placehold.co/600x400/e2e8f0/64748b?text=No+Image";
 onMounted(async () => {
   await fetchRecipeDetails();
   await fetchCollections();
+  // Check if we should open edit modal (from parseFromLink flow)
+  if (route.query.edit === "true") {
+    // Small delay to ensure recipe data is loaded
+    setTimeout(() => {
+      handleEditRecipe();
+    }, 100);
+  }
 });
 
 async function fetchCollections() {
