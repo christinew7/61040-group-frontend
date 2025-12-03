@@ -140,16 +140,21 @@ export async function getAllRecipesGlobal() {
  * @route POST api/Recipe/_search
  * @desc Search recipes by title
  * @param {string} query - The query to search for in recipe titles
+ * @param {string} [userId] - Optional user ID to include their private recipes
  * @returns {Promise<Array>} Array of matching recipes
  */
-export async function searchRecipes(query) {
+export async function searchRecipes(query, userId = null) {
   if (typeof query !== "string") {
     throw new TypeError("Query is required.");
   }
 
   try {
     console.log("searchRecipes API called with query:", query);
-    const response = await api.post("/_search", { query });
+    const payload = { query };
+    if (userId) {
+      payload.requestedBy = userId;
+    }
+    const response = await api.post("/_search", payload);
     console.log("searchRecipes response:", response.data);
 
     // Handle empty or invalid response
@@ -565,16 +570,21 @@ export async function editIngredient(
 /**
  * @route POST api/Recipe/_search
  * @param {string} query
+ * @param {string} [userId] - Optional user ID to include their private recipes
  * @returns {Promise<Array>} Array of RecipeDoc objects
  */
-export async function search(query) {
+export async function search(query, userId = null) {
   try {
     if (!query || query.trim().length === 0) {
       // Avoid network call for empty query
       return [];
     }
 
-    const response = await api.post("/_search", { query });
+    const payload = { query };
+    if (userId) {
+      payload.requestedBy = userId;
+    }
+    const response = await api.post("/_search", payload);
     const result = response.data;
 
     // Check for error object inside array
@@ -593,18 +603,21 @@ export async function search(query) {
  * @route POST api/Recipe/_findRecipeByIngredient
  * @desc Find recipes that contain the specified ingredients, sorted by match count
  * @param {string[]} ingredients - Array of ingredient names to search for
+ * @param {string} [userId] - Optional user ID to include their private recipes
  * @returns {Promise<Array>} Array of matching RecipeDoc objects
  */
-export async function findRecipeByIngredient(ingredients) {
+export async function findRecipeByIngredient(ingredients, userId = null) {
   if (!Array.isArray(ingredients) || ingredients.length === 0) {
     throw new TypeError("Ingredients must be a non-empty array.");
   }
 
   try {
     console.log("findRecipeByIngredient called with:", ingredients);
-    const response = await api.post("/_findRecipeByIngredient", {
-      ingredients,
-    });
+    const payload = { ingredients };
+    if (userId) {
+      payload.requestedBy = userId;
+    }
+    const response = await api.post("/_findRecipeByIngredient", payload);
     console.log("findRecipeByIngredient response:", response.data);
 
     // Handle empty or invalid response
@@ -636,9 +649,10 @@ export async function findRecipeByIngredient(ingredients) {
  * @desc Search recipes by title AND filter by ingredients
  * @param {string} query - Search query for recipe title
  * @param {string[]} ingredients - Array of ingredient names to filter by
+ * @param {string} [userId] - Optional user ID to include their private recipes
  * @returns {Promise<Array>} Array of matching RecipeDoc objects
  */
-export async function filterIngredientAndSearch(query, ingredients) {
+export async function filterIngredientAndSearch(query, ingredients, userId = null) {
   if (typeof query !== "string" || query.trim().length === 0) {
     throw new TypeError("Query is required.");
   }
@@ -651,10 +665,11 @@ export async function filterIngredientAndSearch(query, ingredients) {
       query,
       ingredients,
     });
-    const response = await api.post("/_filterIngredientAndSearch", {
-      query,
-      ingredients,
-    });
+    const payload = { query, ingredients };
+    if (userId) {
+      payload.requestedBy = userId;
+    }
+    const response = await api.post("/_filterIngredientAndSearch", payload);
     console.log("filterIngredientAndSearch response:", response.data);
 
     // Handle empty or invalid response

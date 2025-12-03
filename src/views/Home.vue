@@ -222,26 +222,29 @@ async function fetchFilteredRecipes() {
   try {
     const hasQuery = searchQuery.value?.trim();
     const hasFilters = ingredientFilters.value.length > 0;
+    // Pass user ID to include their private recipes in search results
+    const userId = isLoggedIn.value ? user.value?.userId : null;
 
     let recipes = [];
 
-    // If searching/filtering, search across ALL recipes (including private ones)
+    // If searching/filtering, search across ALL recipes (public + user's own private)
     if (hasQuery && hasFilters) {
       console.log("Searching ALL recipes with both query and ingredients");
       recipes = await filterIngredientAndSearch(
         searchQuery.value.trim(),
-        ingredientFilters.value
+        ingredientFilters.value,
+        userId
       );
     } else if (hasQuery) {
       console.log("Searching ALL recipes with query:", searchQuery.value);
-      // Use the search() function which searches all recipes, not just public
-      recipes = await search(searchQuery.value.trim());
+      // Use the search() function which searches public + user's own recipes
+      recipes = await search(searchQuery.value.trim(), userId);
     } else if (hasFilters) {
       console.log(
         "Filtering ALL recipes by ingredients:",
         ingredientFilters.value
       );
-      recipes = await findRecipeByIngredient(ingredientFilters.value);
+      recipes = await findRecipeByIngredient(ingredientFilters.value, userId);
     } else {
       // No filters - just get public recipes
       console.log("Fetching public recipes (no filters)");
