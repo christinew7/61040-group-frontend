@@ -174,6 +174,15 @@ function handleClose() {
 
 function submitCollection() {
   emit("submit", formData.value);
-  handleClose();
+  // Don't auto-close - let the parent close it after successful creation
+  // This ensures the collections list is refreshed before closing
+  // Reset form after a delay
+  setTimeout(() => {
+    formData.value = {
+      name: "",
+      sharedUsers: [],
+      recipes: [],
+    };
+  }, 300);
 }
 </script>

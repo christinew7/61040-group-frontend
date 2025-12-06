@@ -522,6 +522,9 @@ async function handleCollectionSubmit(collectionData) {
     // Refresh the collections list
     await fetchCollections();
 
+    // Close the popup after successful creation
+    closeAddCollectionPopup();
+
     showSuccess(`Collection "${collectionData.name}" created successfully!`);
   } catch (error) {
     console.error("Failed to create collection:", error);
