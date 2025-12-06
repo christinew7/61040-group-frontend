@@ -284,11 +284,8 @@ async function saveDisplayName() {
     originalDisplayName.value = displayName.value;
     isEditingName.value = false;
     saveSuccess.value = true;
+    router.go(0); 
 
-    // Hide success message after 3 seconds
-    setTimeout(() => {
-      saveSuccess.value = false;
-    }, 3000);
   } catch (error) {
     console.error("Failed to update display name:", error);
     saveError.value = error.message;
