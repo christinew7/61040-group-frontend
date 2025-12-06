@@ -231,6 +231,27 @@ export async function viewRecipe(token, ownerId, title) {
 }
 
 /**
+ * @route POST api/Recipe/_getRecipeById
+ * @desc Get a recipe by ID (public passthrough route)
+ */
+export async function getRecipeById(recipeId) {
+  if (typeof recipeId !== "string") {
+    throw new TypeError("recipeId is required.");
+  }
+
+  try {
+    const response = await api.post("/_getRecipeById", {
+      recipe: recipeId,
+    });
+    return response.data;
+  } catch (err) {
+    console.error("getRecipeById error:", err);
+    throw new Error(
+      err.response?.data?.error || err.message || "Failed to get recipe."
+    );
+  }
+}
+/**
  * @route POST api/Recipe/_getRecipe (passthrough - public)
  * @desc Get a recipe without authentication (no collection status)
  */
@@ -392,18 +413,28 @@ export async function parseFromLink(token, link) {
  * @returns {Promise<void>}
  */
 export async function setRecipeTitle(token, recipeId, title) {
-  if (typeof token !== "string" || typeof recipeId !== "string" || typeof title !== "string") {
+  if (
+    typeof token !== "string" ||
+    typeof recipeId !== "string" ||
+    typeof title !== "string"
+  ) {
     throw new TypeError("Token, recipe ID, and title are required.");
   }
 
   try {
-    const response = await api.post("/setRecipe", { token, recipe: recipeId, title });
+    const response = await api.post("/setRecipe", {
+      token,
+      recipe: recipeId,
+      title,
+    });
 
     if (response.data?.error) {
       throw new Error(response.data.error);
     }
   } catch (err) {
-    throw new Error(err.response?.data?.error || "Failed to update recipe title.");
+    throw new Error(
+      err.response?.data?.error || "Failed to update recipe title."
+    );
   }
 }
 
@@ -673,7 +704,11 @@ export async function findRecipeByIngredient(ingredients, userId = null) {
  * @param {string} [userId] - Optional user ID to include their private recipes
  * @returns {Promise<Array>} Array of matching RecipeDoc objects
  */
-export async function filterIngredientAndSearch(query, ingredients, userId = null) {
+export async function filterIngredientAndSearch(
+  query,
+  ingredients,
+  userId = null
+) {
   if (typeof query !== "string" || query.trim().length === 0) {
     throw new TypeError("Query is required.");
   }

@@ -129,7 +129,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch, onActivated } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import Sidebar from "../components/Sidebar.vue";
 import RecipeDisplay from "../components/RecipeDisplay.vue";
@@ -149,6 +149,7 @@ import {
   getAllRecipesGlobal,
   parseIngredients,
   setImage,
+  getRecipeById,
 } from "../api/Recipe.js";
 import { getProfileByUserId } from "../api/User.js";
 import { useAuth } from "../composables/useAuth.js";
@@ -214,6 +215,22 @@ onMounted(async () => {
   await fetchUserCollections();
 });
 
+// Refetch when navigating back to this page or when collection ID changes
+onActivated(async () => {
+  await fetchCollectionDetails();
+});
+
+// Watch for collection ID changes in route
+watch(
+  () => route.params.id,
+  async (newId) => {
+    if (newId) {
+      collectionId.value = newId;
+      await fetchCollectionDetails();
+    }
+  }
+);
+
 async function fetchUserCollections() {
   if (!token.value) return;
 
@@ -254,16 +271,38 @@ async function fetchCollectionDetails() {
 
     console.log("Collection data:", data);
 
-    // viewCollection returns { items: [...], members: [...] }
-    // items are recipe IDs (strings), not full recipe objects
+    // Backend returns { items: [...recipeIds...], members: [...] }
     const recipeIds = data.items || [];
     const memberIds = data.members || [];
 
     console.log("Collection recipe IDs:", recipeIds);
-    console.log("Number of recipe IDs in collection:", recipeIds.length);
+    console.log("Number of recipe IDs:", recipeIds.length);
     console.log("Collection member IDs:", memberIds);
 
-    // Fetch member details if we have member IDs
+    // Fetch each recipe by ID using the public passthrough route
+    const recipePromises = recipeIds.map((recipeId) =>
+      getRecipeById(recipeId)
+        .then((response) => {
+          // Response is an array with { recipe } or { error }
+          if (response && response.length > 0 && response[0].recipe) {
+            return response[0].recipe;
+          }
+          console.warn(`Recipe ${recipeId} not found or has error`);
+          return null;
+        })
+        .catch((err) => {
+          console.error(`Failed to fetch recipe ${recipeId}:`, err);
+          return null;
+        })
+    );
+
+    const fetchedRecipes = await Promise.all(recipePromises);
+    recipes.value = fetchedRecipes.filter((recipe) => recipe !== null);
+
+    console.log(
+      `Successfully fetched ${recipes.value.length} out of ${recipeIds.length} recipes`
+    );
+
     // Fetch member details if we have member IDs
     if (memberIds.length > 0) {
       const memberDetails = await Promise.all(
@@ -292,30 +331,6 @@ async function fetchCollectionDetails() {
       console.log("Fetched member details:", members.value);
     } else {
       members.value = [];
-    }
-
-    // Fetch all recipes globally (needed for shared collections where recipes belong to other users)
-    const allRecipes = await getAllRecipesGlobal();
-    console.log("All global recipes fetched:", allRecipes.length);
-    console.log("First few global recipes:", allRecipes.slice(0, 3));
-
-    // Filter to only show recipes that are in this collection
-    recipes.value = allRecipes.filter((recipe) => {
-      const isMatch = recipeIds.includes(recipe._id);
-      if (isMatch) {
-        console.log("Match found for recipe:", recipe._id, recipe.title);
-      }
-      return isMatch;
-    });
-
-    console.log("Filtered recipes:", recipes.value);
-    console.log("Number of filtered recipes:", recipes.value.length);
-
-    // If we have recipe IDs but no matches, log for debugging
-    if (recipeIds.length > 0 && recipes.value.length === 0) {
-      console.warn("Collection has recipe IDs but no matching recipes found!");
-      console.log("Sample recipe ID from collection:", recipeIds[0]);
-      console.log("Sample recipe ID from global:", allRecipes[0]?._id);
     }
 
     // Get collection name from route query or use a default
