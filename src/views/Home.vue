@@ -7,7 +7,10 @@
     <!-- My Recipes (owner) -->
     <section v-if="isLoggedIn && !isLoading" class="recipes-section">
       <h3>My Recipes ({{ filteredMyRecipes.length }})</h3>
-      <div v-if="myRecipes.length === 0 && !hasActiveFilters" class="empty-state">
+      <div
+        v-if="myRecipes.length === 0 && !hasActiveFilters"
+        class="empty-state"
+      >
         You haven't created any recipes yet. Add one from the sidebar!
       </div>
       <div v-else-if="filteredMyRecipes.length === 0" class="empty-state">
@@ -39,7 +42,10 @@
       <h3>
         Recipes In My Collections ({{ filteredCollectionRecipes.length }})
       </h3>
-      <div v-if="collectionRecipes.length === 0 && !hasActiveFilters" class="empty-state">
+      <div
+        v-if="collectionRecipes.length === 0 && !hasActiveFilters"
+        class="empty-state"
+      >
         You don't have any recipes in your collections yet.
       </div>
       <div
@@ -201,18 +207,28 @@ const isLoading = ref(false);
 
 // Computed to check if there are active search/filter criteria
 const hasActiveFilters = computed(() => {
-  return (searchQuery.value?.trim() || ingredientFilters.value.length > 0);
+  return searchQuery.value?.trim() || ingredientFilters.value.length > 0;
 });
 
 // Watch for filter changes and fetch filtered results from backend
+// Use a timeout to debounce rapid changes
+let searchTimeout = null;
 watch(
   [searchQuery, ingredientFilters],
   async ([newQuery, newFilters]) => {
-    await fetchFilteredRecipes();
-    if (isLoggedIn.value) {
-      await fetchFilteredMyRecipes();
-      await fetchFilteredCollectionRecipes();
+    // Clear any pending search
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
     }
+
+    // Debounce for 300ms
+    searchTimeout = setTimeout(async () => {
+      await fetchFilteredRecipes();
+      if (isLoggedIn.value) {
+        await fetchFilteredMyRecipes();
+        await fetchFilteredCollectionRecipes();
+      }
+    }, 300);
   },
   { deep: true }
 );

@@ -48,7 +48,7 @@
 
         <div v-if="recipes.length > 0" class="recipes-grid">
           <RecipeDisplay
-            v-for="recipe in recipes"
+            v-for="recipe in filteredRecipes"
             :key="recipe._id"
             :recipe="recipe"
             @click="onRecipeClick"
@@ -154,12 +154,14 @@ import {
 import { getProfileByUserId } from "../api/User.js";
 import { useAuth } from "../composables/useAuth.js";
 import { useHeader } from "../composables/useHeader.js";
+import { useAppSearch } from "../composables/useAppSearch.js";
 import ConfirmationPopup from "../components/ConfirmationPopup.vue";
 
 const router = useRouter();
 const route = useRoute();
 const { token, logout, user, init } = useAuth();
 const { setTitle, setBreadcrumbs, setActions } = useHeader();
+const { searchQuery, ingredientFilters } = useAppSearch();
 
 // Collection data
 const collectionId = ref(route.params.id);
@@ -169,6 +171,44 @@ const recipes = ref([]);
 const members = ref([]);
 const isLoading = ref(false);
 const error = ref(null);
+
+// Computed property for filtered recipes based on search and ingredient filters
+const filteredRecipes = computed(() => {
+  let filtered = recipes.value;
+
+  // Filter by search query (title or description)
+  if (searchQuery.value?.trim()) {
+    const query = searchQuery.value.trim().toLowerCase();
+    filtered = filtered.filter((recipe) => {
+      const matchesTitle = recipe.title?.toLowerCase().includes(query);
+      const matchesDescription = recipe.description
+        ?.toLowerCase()
+        .includes(query);
+      return matchesTitle || matchesDescription;
+    });
+  }
+
+  // Filter by ingredients
+  if (ingredientFilters.value?.length > 0) {
+    filtered = filtered.filter((recipe) => {
+      if (!recipe.ingredients || recipe.ingredients.length === 0) return false;
+
+      // Check if recipe has ALL selected ingredients
+      return ingredientFilters.value.every((filterIngredient) => {
+        const filterName = filterIngredient.toLowerCase();
+        return recipe.ingredients.some((recipeIngredient) => {
+          const ingredientName = recipeIngredient.name?.toLowerCase() || "";
+          return (
+            ingredientName.includes(filterName) ||
+            filterName.includes(ingredientName)
+          );
+        });
+      });
+    });
+  }
+
+  return filtered;
+});
 
 // Computed property to check if current user is the collection owner
 const isOwner = computed(() => {
