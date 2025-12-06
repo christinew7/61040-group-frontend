@@ -311,20 +311,14 @@ async function confirmDeleteAccount() {
   try {
     const authToken = getToken();
     await deleteAccount(authToken);
-    await logout();
 
-    // Close confirmation popup
     isDeleteConfirmOpen.value = false;
 
-    // Redirect to home
     router.push("/");
 
-    // Optional: Show a success message on home page
-    // (You'd need to pass this via route state or a global toast system)
   } catch (error) {
     console.error("Failed to delete account:", error);
 
-    // Close popup and show error inline
     isDeleteConfirmOpen.value = false;
     showError(`Failed to delete account: ${error.message}`);
   }
