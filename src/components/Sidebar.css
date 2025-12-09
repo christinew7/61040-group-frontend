@@ -1,5 +1,5 @@
 .sidebar {
-  width: 260px;
+  width: clamp(260px, 20vw, 400px);
   position: fixed;
   top: 0;
   left: 0;
@@ -38,6 +38,10 @@
   text-align: center;
   cursor: pointer;
   transition: opacity 0.2s;
+}
+
+.sidebar-title h1 .bang {
+  color: var(--color-accent, #ff6b6b);
 }
 
 .sidebar-title h1:hover {
@@ -244,5 +248,5 @@
   color: white;
   /* border-color: #60a5fa; */
   background: var(--color-primary);
-  box-shadow: inset 0 0 0 1px rgba(96,165,250,0.06);
+  box-shadow: inset 0 0 0 1px rgba(96, 165, 250, 0.06);
 }

@@ -173,7 +173,7 @@ function handleProfileClick() {
 }
 
 function handleHomeClick() {
-  router.push({ name: 'Home' });
+  router.push({ name: "Home" });
 }
 
 async function handleLogout() {
@@ -188,10 +188,10 @@ async function onLoginSuccess() {
     await fetchCollections();
     await fetchRecipes();
   } catch (e) {
-    console.error('Failed to refresh user data after login:', e);
+    console.error("Failed to refresh user data after login:", e);
   }
   // Navigate to the app home route
-  router.push({ name: 'Home' });
+  router.push({ name: "Home" });
 }
 
 // Popup Handlers
@@ -401,7 +401,7 @@ async function handleCollectionSubmit(collectionData) {
   flex: 1;
   /* Ensure proper sizing */
   width: 0;
-  margin-left: 260px; /* account for fixed sidebar width */
+  margin-left: clamp(260px, 20vw, 400px); /* match dynamic sidebar width */
   background: var(--app-main-content-background);
 }
 
@@ -415,11 +415,15 @@ async function handleCollectionSubmit(collectionData) {
   min-height: 100vh;
   padding: 2.5rem 1rem 4rem; /* add top padding so hero isn't flush to viewport */
   /* Apply the subtle landing gradient to the full main content for the landing page */
-/* background: linear-gradient(180deg, rgba(239,122,95,0.06), transparent 60%); */
-/* orange: rgba(239,122,95,0.06) */
-/* very light brown: rgba(133, 88, 50, 0.3) */
-/* dark brown: light brown rgba(133, 88, 50, 0.5) */
-background: linear-gradient(180deg, rgba(133, 88, 50, 0.3), rgba(2,142,65,0.05));
+  /* background: linear-gradient(180deg, rgba(239,122,95,0.06), transparent 60%); */
+  /* orange: rgba(239,122,95,0.06) */
+  /* very light brown: rgba(133, 88, 50, 0.3) */
+  /* dark brown: light brown rgba(133, 88, 50, 0.5) */
+  background: linear-gradient(
+    180deg,
+    rgba(133, 88, 50, 0.3),
+    rgba(2, 142, 65, 0.05)
+  );
   background-repeat: no-repeat;
   background-attachment: fixed;
 }

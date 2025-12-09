@@ -678,7 +678,6 @@ function onRecipeClick(recipe) {
 <style scoped>
 .home-view {
   flex: 1;
-  max-width: 1200px;
   padding: 2rem;
   padding-top: 0;
 }

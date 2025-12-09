@@ -2,7 +2,7 @@
   <aside class="sidebar">
     <!-- Title -->
     <div class="sidebar-title" @click="handleHomeClick">
-      <h1>cooked!</h1>
+      <h1>cooked<span class="bang">!</span></h1>
     </div>
 
     <!-- Navigation Links -->
