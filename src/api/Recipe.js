@@ -32,7 +32,6 @@ export async function createRecipe(
       description,
       isPublic,
     });
-    console.log("API response for createRecipe:", response.data);
 
     // Check if response contains an error
     if (response.data.error) {
@@ -41,7 +40,6 @@ export async function createRecipe(
 
     // Backend returns { recipe: recipeId } where recipe is just the ID string
     const recipeId = response.data.recipe;
-    console.log("Created recipe ID:", recipeId);
     return recipeId;
   } catch (err) {
     console.error("createRecipe API error:", err.response?.data || err.message);
@@ -95,8 +93,6 @@ export async function getAllMyRecipes(token) {
 
   try {
     const response = await api.post("/getAllMyRecipes", { token });
-    console.log("getAllMyRecipes response:", response.data);
-    console.log("First recipe (if exists):", response.data.recipes?.[0]);
     return response.data.recipes;
   } catch (err) {
     throw new Error(err.response?.data?.error || "Failed to fetch recipes.");
@@ -110,8 +106,6 @@ export async function getAllMyRecipes(token) {
 export async function getAllRecipesGlobal() {
   try {
     const response = await api.post("/_getAllRecipesGlobal");
-    console.log("getAllRecipesGlobal response:", response);
-    console.log("getAllRecipesGlobal response.data:", response.data);
 
     // Handle empty or invalid response
     if (!response.data) {
@@ -125,8 +119,6 @@ export async function getAllRecipesGlobal() {
       ? response.data.map((item) => item.recipe)
       : [];
 
-    console.log("First recipe (if exists):", recipes[0]);
-    console.log("Total recipes:", recipes.length);
     return recipes;
   } catch (err) {
     console.error("getAllRecipesGlobal error:", err);
@@ -149,13 +141,11 @@ export async function searchRecipes(query, userId = null) {
   }
 
   try {
-    console.log("searchRecipes API called with query:", query);
     const payload = { query };
     if (userId) {
       payload.requestedBy = userId;
     }
     const response = await api.post("/_search", payload);
-    console.log("searchRecipes response:", response.data);
 
     // Handle empty or invalid response
     if (!response.data) {
@@ -176,7 +166,6 @@ export async function searchRecipes(query, userId = null) {
       // Backend returns recipe IDs, so we need to fetch full recipes
       if (response.data[0].recipes) {
         const recipeIds = response.data[0].recipes;
-        console.log("Search returned recipe IDs:", recipeIds);
 
         // Fetch all recipes and filter by IDs
         const allRecipesResponse = await api.post("/_getAllRecipesGlobal");
@@ -189,12 +178,10 @@ export async function searchRecipes(query, userId = null) {
           recipeIds.includes(recipe._id)
         );
 
-        console.log("Search results:", matchingRecipes.length, "recipes found");
         return matchingRecipes;
       }
     }
 
-    console.log("Unexpected response format, returning empty array");
     return [];
   } catch (err) {
     console.error("searchRecipes error:", err);
@@ -342,19 +329,13 @@ export async function parseIngredients(token, recipeId, ingredientsText) {
     throw new TypeError("Token, recipe ID, and text are required.");
   }
 
-  console.log("parseIngredients called with:", {
-    token: token.substring(0, 10) + "...",
-    recipeId,
-    ingredientsText,
-  });
-
   try {
     const response = await api.post("/parseIngredients", {
       token,
       recipe: recipeId,
       ingredientsText,
     });
-    console.log("parseIngredients response:", response.data);
+
     return response.data.ingredients;
   } catch (err) {
     console.error("parseIngredients error:", err.response?.data || err.message);
@@ -376,17 +357,12 @@ export async function parseFromLink(token, link) {
     throw new TypeError("Token and link are required.");
   }
 
-  console.log("parseFromLink called with:", {
-    token: token.substring(0, 10) + "...",
-    link,
-  });
 
   try {
     const response = await api.post("/parseFromLink", {
       token,
       link,
     });
-    console.log("parseFromLink response:", response.data);
 
     // Check if response contains an error
     if (response.data.error) {
@@ -544,18 +520,6 @@ export async function setRecipePublic(token, recipeId, isPublic) {
   }
 }
 
-// /**
-//  * @route POST api/Recipe/setRecipePublic
-//  */
-// export async function setRecipePublic(token, recipeId, isPublic) {
-//     try {
-//       await api.post("/setRecipePublic", { token, recipe: recipeId, isPublic });
-//       return true;
-//     } catch (err) {
-//       throw new Error(err.response?.data?.error || "Failed to set public flag.");
-//     }
-// }
-
 // --- Global Ingredient CRUD ---
 
 /**
@@ -659,41 +623,46 @@ export async function search(query, userId = null) {
 function generateIngredientVariations(ingredient) {
   const variations = [ingredient];
   const lower = ingredient.toLowerCase().trim();
-  
+
   // Common plural patterns
-  if (lower.endsWith('s') && lower.length > 2) {
+  if (lower.endsWith("s") && lower.length > 2) {
     // Try removing 's' for plural -> singular
     variations.push(lower.slice(0, -1));
-    
+
     // Handle -es endings (tomatoes -> tomato)
-    if (lower.endsWith('es') && lower.length > 3) {
+    if (lower.endsWith("es") && lower.length > 3) {
       variations.push(lower.slice(0, -2));
     }
-    
+
     // Handle -ies endings (berries -> berry)
-    if (lower.endsWith('ies') && lower.length > 4) {
-      variations.push(lower.slice(0, -3) + 'y');
+    if (lower.endsWith("ies") && lower.length > 4) {
+      variations.push(lower.slice(0, -3) + "y");
     }
   } else {
     // Try adding 's' for singular -> plural
-    variations.push(lower + 's');
-    
+    variations.push(lower + "s");
+
     // Handle -y endings (berry -> berries)
-    if (lower.endsWith('y') && lower.length > 2) {
+    if (lower.endsWith("y") && lower.length > 2) {
       const beforeY = lower.charAt(lower.length - 2);
       // Only if consonant before y
-      if (!'aeiou'.includes(beforeY)) {
-        variations.push(lower.slice(0, -1) + 'ies');
+      if (!"aeiou".includes(beforeY)) {
+        variations.push(lower.slice(0, -1) + "ies");
       }
     }
-    
+
     // Handle common -es plurals (tomato -> tomatoes, potato -> potatoes)
-    if (lower.endsWith('o') || lower.endsWith('ch') || lower.endsWith('sh') || 
-        lower.endsWith('x') || lower.endsWith('z')) {
-      variations.push(lower + 'es');
+    if (
+      lower.endsWith("o") ||
+      lower.endsWith("ch") ||
+      lower.endsWith("sh") ||
+      lower.endsWith("x") ||
+      lower.endsWith("z")
+    ) {
+      variations.push(lower + "es");
     }
   }
-  
+
   return [...new Set(variations)]; // Remove duplicates
 }
 
@@ -711,16 +680,16 @@ export async function findRecipeByIngredient(ingredients, userId = null) {
 
   try {
     // Expand ingredients to include singular/plural variations
-    const expandedIngredients = ingredients.flatMap(ing => generateIngredientVariations(ing));
-    console.log("findRecipeByIngredient called with:", ingredients);
-    console.log("Expanded to variations:", expandedIngredients);
-    
+    const expandedIngredients = ingredients.flatMap((ing) =>
+      generateIngredientVariations(ing)
+    );
+
     const payload = { ingredients: expandedIngredients };
     if (userId) {
       payload.requestedBy = userId;
     }
     const response = await api.post("/_findRecipeByIngredient", payload);
-    console.log("findRecipeByIngredient response:", response.data);
+
 
     // Handle empty or invalid response
     if (!response.data) {
@@ -768,18 +737,14 @@ export async function filterIngredientAndSearch(
 
   try {
     // Expand ingredients to include singular/plural variations
-    const expandedIngredients = ingredients.flatMap(ing => generateIngredientVariations(ing));
-    console.log("filterIngredientAndSearch called with:", {
-      query,
-      ingredients,
-    });
-    console.log("Expanded to variations:", expandedIngredients);
+    const expandedIngredients = ingredients.flatMap((ing) =>
+      generateIngredientVariations(ing)
+    );
     const payload = { query, ingredients: expandedIngredients };
     if (userId) {
       payload.requestedBy = userId;
     }
     const response = await api.post("/_filterIngredientAndSearch", payload);
-    console.log("filterIngredientAndSearch response:", response.data);
 
     // Handle empty or invalid response
     if (!response.data) {
@@ -823,17 +788,9 @@ export async function findRecipeByIngredientWithinRecipes(
 
   try {
     // Expand ingredients to include singular/plural variations
-    const expandedIngredients = ingredients.flatMap(ing => generateIngredientVariations(ing));
-    console.log("findRecipeByIngredientWithinRecipes called with:", {
-      ingredients,
-      recipes,
-    });
-    console.log("Expanded to variations:", expandedIngredients);
-    const response = await api.post("/_findRecipeByIngredientWithinRecipes", {
-      ingredients: expandedIngredients,
-      recipes,
-    });
-    console.log("findRecipeByIngredientWithinRecipes response:", response.data);
+    const expandedIngredients = ingredients.flatMap((ing) =>
+      generateIngredientVariations(ing)
+    );
 
     if (!response.data) {
       return [];
@@ -871,12 +828,10 @@ export async function searchWithinRecipes(query, recipes) {
   }
 
   try {
-    console.log("searchWithinRecipes called with:", { query, recipes });
     const response = await api.post("/_searchWithinRecipes", {
       query,
       recipes,
     });
-    console.log("searchWithinRecipes response:", response.data);
 
     if (!response.data) {
       return [];
@@ -922,11 +877,7 @@ export async function filterIngredientAndSearchWithinRecipes(
   }
 
   try {
-    console.log("filterIngredientAndSearchWithinRecipes called with:", {
-      recipes,
-      query,
-      ingredients,
-    });
+
     const response = await api.post(
       "/_filterIngredientAndSearchWithinRecipes",
       {
@@ -934,10 +885,6 @@ export async function filterIngredientAndSearchWithinRecipes(
         query,
         ingredients,
       }
-    );
-    console.log(
-      "filterIngredientAndSearchWithinRecipes response:",
-      response.data
     );
 
     if (!response.data) {
@@ -968,7 +915,6 @@ export async function filterIngredientAndSearchWithinRecipes(
 export async function getIngredients() {
   try {
     const response = await api.post("/_getIngredients", {});
-    console.log("getIngredients response:", response.data);
 
     if (!response.data) {
       return [];
@@ -1002,9 +948,7 @@ export async function getIngredientsByName(name) {
   }
 
   try {
-    console.log("getIngredientsByName called with:", name);
     const response = await api.post("/_getIngredientsByName", { name });
-    console.log("getIngredientsByName response:", response.data);
 
     if (!response.data) {
       return [];
@@ -1044,12 +988,10 @@ export async function scaleIngredients(recipe, scaleFactor) {
   }
 
   try {
-    console.log("scaleIngredients called with:", { recipe, scaleFactor });
     const response = await api.post("/_scaleIngredients", {
       recipe,
       scaleFactor,
     });
-    console.log("scaleIngredients response:", response.data);
 
     if (!response.data) {
       return [];
@@ -1082,17 +1024,26 @@ export async function parseIngredientsFromText(token, ingredientsText) {
   }
 
   try {
-    const response = await api.post("/_parseIngredientsFromText", { token, ingredientsText });
-    
+    const response = await api.post("/_parseIngredientsFromText", {
+      token,
+      ingredientsText,
+    });
+
     // Response is an array, extract the first element
-    const result = Array.isArray(response.data) ? response.data[0] : response.data;
-    
+    const result = Array.isArray(response.data)
+      ? response.data[0]
+      : response.data;
+
     if (result.error) {
       throw new Error(result.error);
     }
-    
+
     return result.formattedText;
   } catch (err) {
-    throw new Error(err.response?.data?.error || err.message || "Failed to parse ingredients from text.");
+    throw new Error(
+      err.response?.data?.error ||
+        err.message ||
+        "Failed to parse ingredients from text."
+    );
   }
 }

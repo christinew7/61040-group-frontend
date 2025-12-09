@@ -305,15 +305,9 @@ async function fetchCollectionDetails() {
     const authToken = getToken();
     const data = await viewCollection(authToken, collectionId.value);
 
-    console.log("Collection data:", data);
-
     // Backend returns { items: [...recipeIds...], members: [...] }
     const recipeIds = data.items || [];
     const memberIds = data.members || [];
-
-    console.log("Collection recipe IDs:", recipeIds);
-    console.log("Number of recipe IDs:", recipeIds.length);
-    console.log("Collection member IDs:", memberIds);
 
     // Fetch each recipe by ID using the public passthrough route
     const recipePromises = recipeIds.map((recipeId) =>
@@ -334,10 +328,6 @@ async function fetchCollectionDetails() {
 
     const fetchedRecipes = await Promise.all(recipePromises);
     recipes.value = fetchedRecipes.filter((recipe) => recipe !== null);
-
-    console.log(
-      `Successfully fetched ${recipes.value.length} out of ${recipeIds.length} recipes`
-    );
 
     // Fetch member details if we have member IDs
     if (memberIds.length > 0) {
@@ -364,7 +354,6 @@ async function fetchCollectionDetails() {
         })
       );
       members.value = memberDetails;
-      console.log("Fetched member details:", members.value);
     } else {
       members.value = [];
     }
@@ -378,13 +367,6 @@ async function fetchCollectionDetails() {
       { label: collectionName.value },
     ]);
     collectionOwner.value = route.query.owner || "";
-
-    console.log("Collection owner:", collectionOwner.value);
-    console.log("Current user object:", user.value);
-    console.log("Current user ID:", user.value?.id);
-    console.log("Current user _id:", user.value?._id);
-    console.log("Is owner:", isOwner.value);
-
     // Set header actions
     const actions = [
       {

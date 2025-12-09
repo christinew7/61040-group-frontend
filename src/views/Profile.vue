@@ -145,6 +145,7 @@ import {
   parseIngredients,
   getAllMyRecipes,
   setImage,
+  getRecipeById,
 } from "../api/Recipe.js";
 import { getProfile, updateDisplayName, deleteAccount } from "../api/User.js";
 
@@ -239,7 +240,46 @@ async function fetchCollections() {
   try {
     const authToken = getToken();
     const response = await getMyCollections(authToken);
-    userCollections.value = response;
+
+    // For each collection, fetch the first recipe's image
+    const collectionsWithImages = await Promise.all(
+      (response || []).map(async (collection) => {
+        // Make a copy to avoid mutating the original
+        const collectionCopy = { ...collection };
+
+        // If collection has items, fetch the first recipe
+        if (collection.items && collection.items.length > 0) {
+          const firstRecipeId = collection.items[0];
+
+          try {
+            const recipeResponse = await getRecipeById(firstRecipeId);
+            // Response is an array with { recipe } or { error }
+            if (
+              recipeResponse &&
+              recipeResponse.length > 0 &&
+              recipeResponse[0].recipe
+            ) {
+              const recipe = recipeResponse[0].recipe;
+              // Add the recipe image to the first item so CollectionDisplay can use it
+              collectionCopy.items = [
+                { image: recipe.image },
+                ...collection.items.slice(1),
+              ];
+            }
+          } catch (err) {
+            console.error(
+              `Failed to fetch recipe ${firstRecipeId} for collection thumbnail:`,
+              err
+            );
+            // Keep the collection without an image
+          }
+        }
+
+        return collectionCopy;
+      })
+    );
+
+    userCollections.value = collectionsWithImages;
   } catch (error) {
     console.error("Failed to fetch collections:", error);
     collectionsError.value = error.message;
@@ -284,8 +324,7 @@ async function saveDisplayName() {
     originalDisplayName.value = displayName.value;
     isEditingName.value = false;
     saveSuccess.value = true;
-    router.go(0); 
-
+    router.go(0);
   } catch (error) {
     console.error("Failed to update display name:", error);
     saveError.value = error.message;
@@ -312,7 +351,6 @@ async function confirmDeleteAccount() {
     isDeleteConfirmOpen.value = false;
 
     router.push("/");
-
   } catch (error) {
     console.error("Failed to delete account:", error);
 

@@ -124,8 +124,6 @@ export async function getProfileByUserId(userId) {
   try {
     const response = await profileApi.post("/_getProfile", { userId });
 
-    console.log("getProfileByUserId response for", userId, ":", response.data);
-
     const result = response.data;
 
     // Handle error response
