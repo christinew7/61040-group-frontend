@@ -102,15 +102,59 @@
             <!-- Step 6: Add Ingredients -->
             <div class="form-section">
               <h3>4. Add Ingredients</h3>
+              
+              <div class="ingredient-input-choice">
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    v-model="ingredientInputMode"
+                    value="manual"
+                    name="ingredientMode"
+                  />
+                  <span>Manual Format</span>
+                </label>
+                <label class="radio-option">
+                  <input
+                    type="radio"
+                    v-model="ingredientInputMode"
+                    value="ai"
+                    name="ingredientMode"
+                  />
+                  <span>Paste & Format with AI</span>
+                </label>
+              </div>
+
               <textarea
                 v-model="formData.ingredientsText"
-                placeholder="Enter one ingredient per line in format: quantity, unit, name&#10;Example:&#10;1, cup, flour&#10;2, tablespoons, sugar&#10;0.5, teaspoon, salt"
+                :placeholder="ingredientInputMode === 'manual' 
+                  ? 'Enter one ingredient per line:\nquantity, unit, name\nExample: 1, cup, flour' 
+                  : 'Paste ingredients from any recipe...'
+                "
                 class="form-textarea"
                 rows="8"
               ></textarea>
+              
+              <!-- Parse Button (only for AI mode) -->
+              <button
+                v-if="ingredientInputMode === 'ai'"
+                @click="handleParseIngredients"
+                :disabled="isParsingIngredients || !formData.ingredientsText.trim()"
+                class="nav-button secondary"
+                style="margin-top: 10px"
+                type="button"
+              >
+                {{ isParsingIngredients ? "Parsing..." : "Format with AI" }}
+              </button>
+              
+              <p v-if="parseIngredientsError" class="error-hint">
+                {{ parseIngredientsError }}
+              </p>
+              
               <p class="form-hint">
-                Format: <code>quantity, unit, name</code> (one per line)<br />
-                Example: <code>1, cup, flour</code>
+                {{ ingredientInputMode === 'manual' 
+                  ? 'Format: quantity, unit, name (one per line)' 
+                  : 'One ingredient per line'
+                }}
               </p>
             </div>
           </template>
@@ -246,7 +290,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
-import { parseFromLink } from "../api/Recipe.js";
+import { parseFromLink, parseIngredientsFromText } from "../api/Recipe.js";
 import { useAuth } from "../composables/useAuth.js";
 import "./AddRecipePopup.css";
 
@@ -283,6 +327,11 @@ const formData = ref({
   isPublic: false,
   ingredientsText: "",
 });
+
+//Ingredient input
+const ingredientInputMode = ref("ai"); 
+const isParsingIngredients = ref(false);
+const parseIngredientsError = ref("");
 
 const canSubmit = computed(() => {
   if (inputMode.value === "manual") {
@@ -387,6 +436,31 @@ function handleImageUpload(event) {
       formData.value.image = e.target.result;
     };
     reader.readAsDataURL(file);
+  }
+}
+
+async function handleParseIngredients() {
+  if (!token.value) {
+    parseIngredientsError.value = "Please sign in to use AI formatting";
+    return;
+  }
+
+  if (!formData.value.ingredientsText.trim()) {
+    parseIngredientsError.value = "Please enter some ingredients first";
+    return;
+  }
+
+  isParsingIngredients.value = true;  
+  parseIngredientsError.value = "";
+
+  try {
+    const formatted = await parseIngredientsFromText(token.value, formData.value.ingredientsText);
+    formData.value.ingredientsText = formatted;
+  } catch (error) {
+    console.error("Failed to parse ingredients:", error);
+    parseIngredientsError.value = error.message || "Failed to parse ingredients";
+  } finally {
+    isParsingIngredients.value = false;  
   }
 }
 

@@ -1014,3 +1014,29 @@ export async function scaleIngredients(recipe, scaleFactor) {
     );
   }
 }
+
+/**
+ * @route POST api/Recipe/_parseIngredientsFromText
+ * @desc Parse unformatted ingredient text using LLM
+ * @returns {Promise<string>} Formatted ingredients text
+ */
+export async function parseIngredientsFromText(token, ingredientsText) {
+  if (typeof token !== "string" || typeof ingredientsText !== "string") {
+    throw new TypeError("Token and ingredients text are required.");
+  }
+
+  try {
+    const response = await api.post("/_parseIngredientsFromText", { token, ingredientsText });
+    
+    // Response is an array, extract the first element
+    const result = Array.isArray(response.data) ? response.data[0] : response.data;
+    
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    
+    return result.formattedText;
+  } catch (err) {
+    throw new Error(err.response?.data?.error || err.message || "Failed to parse ingredients from text.");
+  }
+}
