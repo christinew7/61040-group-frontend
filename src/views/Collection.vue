@@ -161,7 +161,7 @@ const router = useRouter();
 const route = useRoute();
 const { token, logout, user, init } = useAuth();
 const { setTitle, setBreadcrumbs, setActions } = useHeader();
-const { searchQuery, ingredientFilters } = useAppSearch();
+const { searchQuery, ingredientFilters, matchesIngredient } = useAppSearch();
 
 // Collection data
 const collectionId = ref(route.params.id);
@@ -193,15 +193,11 @@ const filteredRecipes = computed(() => {
     filtered = filtered.filter((recipe) => {
       if (!recipe.ingredients || recipe.ingredients.length === 0) return false;
 
-      // Check if recipe has ALL selected ingredients
+      // Check if recipe has ALL selected ingredients (with plural/singular matching)
       return ingredientFilters.value.every((filterIngredient) => {
-        const filterName = filterIngredient.toLowerCase();
         return recipe.ingredients.some((recipeIngredient) => {
           const ingredientName = recipeIngredient.name?.toLowerCase() || "";
-          return (
-            ingredientName.includes(filterName) ||
-            filterName.includes(ingredientName)
-          );
+          return matchesIngredient(ingredientName, filterIngredient);
         });
       });
     });
