@@ -43,6 +43,15 @@
             <p v-else class="empty-members">
               No members in this collection yet.
             </p>
+            
+            <!-- Add Member Button (only for owner) -->
+            <button
+              v-if="isOwner"
+              @click="showAddMemberDialog"
+              class="btn-add-member"
+            >
+              + Add Member
+            </button>
           </div>
         </div>
 
@@ -953,6 +962,30 @@ function getMemberUserId(member) {
   text-align: center;
   padding: 1rem;
   margin: 0;
+}
+
+.btn-add-member {
+  width: 100%;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-add-member:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(2, 142, 65, 0.2);
+}
+
+.btn-add-member:active {
+  transform: translateY(0);
 }
 
 /* Short term success/error message */
